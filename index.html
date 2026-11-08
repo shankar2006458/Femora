@@ -1,0 +1,3045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#fef6f9" />
+<title>Femora — Period Tracker</title>
+
+<!-- ============ PWA ============ -->
+<link rel="manifest" href="manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Femora" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<!-- ============================= -->
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          blush: {
+            50: '#fef6f9', 100: '#fde8f0', 200: '#fbd2e2', 300: '#f6aec9',
+            400: '#ee83ab', 500: '#e05c8c', 600: '#c93f70', 700: '#a52f59'
+          },
+          lilac: {
+            50: '#f8f6fd', 100: '#f0ecfb', 200: '#e2dbf7', 300: '#cabcf0',
+            400: '#ad95e5', 500: '#9070d6', 600: '#7a55c2'
+          },
+          ink: '#3b2b38'
+        },
+        fontFamily: {
+          display: ['"Playfair Display"', 'Georgia', 'serif'],
+          sans: ['Inter', 'system-ui', 'sans-serif']
+        }
+      }
+    }
+  };
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<style>
+  :root { color-scheme: light; }
+  html, body { -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Inter', system-ui, sans-serif; overflow-x: hidden; }
+
+  /* ---------- form controls ---------- */
+  .field-label {
+    display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: #7c6572; font-weight: 600; margin-bottom: 6px;
+  }
+  .input {
+    width: 100%; border-radius: 16px; border: 1.5px solid #fbd2e2; background: #fff;
+    padding: 12px 15px; font-size: 14px; color: #3b2b38; outline: none;
+    transition: border-color .2s, box-shadow .2s; font-family: inherit;
+    -webkit-appearance: none; appearance: none;
+  }
+  .input::placeholder { color: #a08b99; opacity: 1; }
+  .input:focus { border-color: #f6aec9; box-shadow: 0 0 0 4px rgba(251, 210, 226, .55); }
+  textarea.input { resize: none; line-height: 1.5; }
+  input[type="date"].input, input[type="time"].input { min-height: 48px; }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator { opacity: .45; cursor: pointer; }
+
+  /* ---------- buttons ---------- */
+  .btn-primary {
+    border-radius: 16px; padding: 13px 20px; font-size: 14px; font-weight: 600; color: #fff;
+    background-image: linear-gradient(135deg, #e05c8c 0%, #c93f70 55%, #9070d6 130%);
+    box-shadow: 0 10px 24px -10px rgba(201, 63, 112, .8);
+    transition: transform .15s ease, box-shadow .2s ease, opacity .2s;
+    font-family: inherit; border: none; cursor: pointer;
+  }
+  .btn-primary:active { transform: scale(.97); }
+  .btn-primary:disabled { opacity: .45; box-shadow: none; cursor: not-allowed; }
+
+  .btn-ghost {
+    border-radius: 16px; padding: 13px 20px; font-size: 14px; font-weight: 600;
+    color: #6e5a68; background: #fff; border: 1.5px solid #fbd2e2;
+    transition: background .2s, transform .15s; font-family: inherit; cursor: pointer;
+  }
+  .btn-ghost:active { transform: scale(.97); }
+
+  .btn-soft {
+    border-radius: 14px; padding: 10px 14px; font-size: 12px; font-weight: 600;
+    color: #a52f59; background: #fde8f0; border: none; transition: background .2s, transform .15s;
+    font-family: inherit; cursor: pointer;
+  }
+  .btn-soft:active { transform: scale(.96); }
+
+  .btn-danger {
+    border-radius: 16px; padding: 13px 20px; font-size: 14px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, #ef4444, #dc2626); border: none;
+    transition: transform .15s, opacity .2s; font-family: inherit; cursor: pointer;
+    box-shadow: 0 10px 24px -12px rgba(220, 38, 38, .9);
+  }
+  .btn-danger:active { transform: scale(.97); }
+
+  /* ---------- screens ---------- */
+  .screen { display: none; }
+  .screen.active { display: block; }
+  @keyframes femoraFadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .screen.active { animation: femoraFadeUp .38s cubic-bezier(.22,.8,.32,1) both; }
+
+  @keyframes femoraPop {
+    0% { opacity: 0; transform: scale(.94); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .pop-in { animation: femoraPop .35s cubic-bezier(.22,.8,.32,1) both; }
+
+  /* ---------- nav ---------- */
+  .nav-btn { position: relative; z-index: 2; -webkit-tap-highlight-color: transparent; }
+
+  /* ---------- calendar ---------- */
+  .cal-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    width: 100%;
+    border-radius: 14px;
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-cell:active { transform: scale(.93); }
+
+  .cal-cell.is-actual {
+    background-image: linear-gradient(135deg, #e05c8c 0%, #c93f70 60%, #a52f59 100%);
+    color: #fff;
+    box-shadow: 0 6px 16px -6px rgba(201, 63, 112, .85);
+  }
+  .cal-cell.is-actual .cal-dot { background: rgba(255,255,255,.85); }
+
+  .cal-cell.is-predicted {
+    background: #fde8f0;
+    color: #a52f59;
+    box-shadow: inset 0 0 0 1.5px #f6aec9;
+  }
+
+  /* Today = always-visible lilac ring (works on plain, predicted & actual cells) */
+  .cal-cell.is-today {
+    box-shadow: inset 0 0 0 2px #9070d6;
+  }
+  .cal-cell.is-today.is-predicted {
+    box-shadow: inset 0 0 0 2px #9070d6, inset 0 0 0 3.5px #fde8f0;
+  }
+  .cal-cell.is-today.is-actual {
+    box-shadow: inset 0 0 0 2px #9070d6, 0 6px 16px -6px rgba(201, 63, 112, .85);
+  }
+
+  /* When today is ALSO selected, keep the selected glow but keep the ring readable */
+  .cal-cell.is-today.is-selected {
+    box-shadow: inset 0 0 0 2px #9070d6, 0 0 0 2.5px #7a55c2, 0 6px 16px -8px rgba(122, 85, 194, .9);
+  }
+  .cal-cell.is-today { font-weight: 700; }
+
+  .cal-cell.is-selected {
+    box-shadow: 0 0 0 2.5px #9070d6, 0 6px 16px -8px rgba(122,85,194,.9);
+    transform: scale(1.04);
+    z-index: 5;
+  }
+
+  .cal-cell .cal-dot {
+    position: absolute;
+    bottom: 5px;
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: #e05c8c;
+  }
+
+  /* month slide animation */
+  @keyframes calSlideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .cal-grid-anim { animation: calSlideIn .28s cubic-bezier(.22,.8,.32,1) both; }
+
+  /* ---------- history filter chips ---------- */
+  .hist-chip {
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #6e5a68;
+    background: #fff;
+    border: 1.5px solid #fbd2e2;
+    transition: background .2s, color .2s, border-color .2s, transform .15s;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .hist-chip:active { transform: scale(.95); }
+  .hist-chip-active {
+    color: #fff;
+    background-image: linear-gradient(135deg, #e05c8c 0%, #c93f70 100%);
+    border-color: transparent;
+    box-shadow: 0 6px 16px -8px rgba(201, 63, 112, .85);
+  }
+
+  /* ---------- history timeline ---------- */
+  .tl-rail {
+    position: relative;
+    padding-left: 26px;
+  }
+  .tl-rail::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #f6aec9 0%, #e2dbf7 60%, transparent 100%);
+  }
+  .tl-node {
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    box-shadow: 0 0 0 2px #fbd2e2;
+    z-index: 1;
+  }
+  .tl-node.is-ongoing {
+    box-shadow: 0 0 0 2px #ad95e5, 0 0 0 5px rgba(173, 149, 229, .18);
+  }
+  .tl-node-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e05c8c, #c93f70);
+  }
+  .tl-node.is-ongoing .tl-node-dot {
+    background: linear-gradient(135deg, #9070d6, #7a55c2);
+  }
+  .tl-month {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 8px;
+  }
+  .tl-month:first-child { margin-top: 0; }
+  .tl-month-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, #fbd2e2, transparent);
+  }
+  .tl-notes-clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .tl-notes-clamp.is-open {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+
+  /* View all button under the timeline preview */
+  .tl-viewall {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 4px;
+    padding: 11px 16px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #a52f59;
+    background: #fff;
+    border: 1.5px solid #fbd2e2;
+    transition: background .2s, transform .15s, box-shadow .2s;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 6px 18px -14px rgba(201, 63, 112, .9);
+  }
+  .tl-viewall:active { transform: scale(.97); }
+  .tl-viewall:hover { background: #fef6f9; }
+
+  /* Extra top space inside the "View all" sheet so cards breathe */
+  #modalPanel .tl-sheet-list .tl-rail:first-child { margin-top: 4px; }
+
+  /* ---------- modal scroll-to-top button ---------- */
+  #modalScrollTopBtn.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  #modalScrollTopBtn:active { transform: scale(.92); }
+
+  /* ---------- misc ---------- */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+    .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+
+  /* Lock background scrolling while a modal/sheet is open */
+  body.modal-open { overflow: hidden; }
+
+  /* subtle pressed feedback for home cards */
+  #screen-home button { -webkit-tap-highlight-color: transparent; }
+  #screen-home .pop-in { will-change: transform, opacity; }
+</style>
+</head>
+
+<body class="min-h-screen bg-[#fdf7fa] text-ink antialiased selection:bg-blush-200">
+
+<!-- decorative background -->
+<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+  <div class="absolute -top-28 -right-24 h-72 w-72 rounded-full bg-blush-200/50 blur-3xl"></div>
+  <div class="absolute top-1/3 -left-28 h-72 w-72 rounded-full bg-lilac-200/50 blur-3xl"></div>
+  <div class="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-blush-100/70 blur-3xl"></div>
+</div>
+
+<div class="relative mx-auto min-h-screen w-full max-w-md">
+
+  <main class="px-5 pt-7 pb-0">
+
+    <!-- ============================================================ HOME -->
+    <section id="screen-home" class="screen active">
+      <header class="mb-5 flex items-center justify-between">
+        <div class="min-w-0">
+          <p id="homeDate" class="text-[10px] font-semibold uppercase tracking-[0.22em] text-blush-600">—</p>
+          <h1 class="mt-1 font-display text-[27px] leading-tight text-ink">
+            Hello, Beautiful<span class="text-blush-500">.</span>
+          </h1>
+          <p id="homeGreeting" class="mt-0.5 text-[12px] leading-snug text-ink/55">—</p>
+        </div>
+        <button id="homeAvatar" type="button" aria-label="Your profile"
+          class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blush-200 to-lilac-200 shadow-[0_8px_20px_-10px_rgba(201,63,112,0.7)] transition active:scale-95">
+          <i data-lucide="flower-2" class="h-6 w-6 text-blush-700"></i>
+          <span id="homeAvatarBadge" class="absolute -right-0.5 -top-0.5 hidden h-3 w-3 rounded-full border-2 border-white bg-blush-500"></span>
+        </button>
+      </header>
+
+      <!-- Hero -->
+      <div id="heroCard" class="pop-in"></div>
+
+      <!-- Cycle phase strip -->
+      <div id="phaseStrip" class="mt-3"></div>
+
+      <!-- Stat chips (3-up) -->
+      <div id="infoCards" class="mt-3 grid grid-cols-3 gap-2.5"></div>
+
+      <!-- Insights -->
+      <div id="insightCard" class="mt-3"></div>
+
+      <!-- Quick actions -->
+      <div class="mt-6">
+        <div class="mb-2.5 flex items-baseline justify-between">
+          <h2 class="text-[13px] font-semibold text-ink/70">Quick Actions</h2>
+          <button id="qaMore" type="button" class="text-[11.5px] font-semibold text-blush-700 transition active:scale-95">Add manually</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="qaStart"
+            class="group flex items-center gap-3 rounded-2xl border border-blush-200 bg-white px-3.5 py-3 text-left shadow-[0_6px_18px_-14px_rgba(201,63,112,0.9)] transition active:scale-[.97] disabled:opacity-40 disabled:pointer-events-none">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blush-50 text-blush-600">
+              <i data-lucide="droplet" class="h-4 w-4"></i>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-[12.5px] font-semibold leading-tight text-blush-700">Period Started</span>
+              <span class="block text-[10.5px] leading-tight text-ink/50">Log today</span>
+            </span>
+          </button>
+          <button id="qaEnd"
+            class="group flex items-center gap-3 rounded-2xl border border-lilac-200 bg-white px-3.5 py-3 text-left shadow-[0_6px_18px_-14px_rgba(122,85,194,0.9)] transition active:scale-[.97] disabled:opacity-40 disabled:pointer-events-none">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lilac-50 text-lilac-600">
+              <i data-lucide="check-circle-2" class="h-4 w-4"></i>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-[12.5px] font-semibold leading-tight text-lilac-600">Period Ended</span>
+              <span class="block text-[10.5px] leading-tight text-ink/50">Confirm end</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Upcoming -->
+      <div id="upcomingSection" class="mt-6"></div>
+    </section>
+
+    <!-- ======================================================== CALENDAR -->
+    <section id="screen-calendar" class="screen">
+      <header class="mb-4 flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-blush-600">Your Cycle</p>
+          <h1 class="mt-1 font-display text-[26px] leading-tight text-ink">Calendar</h1>
+        </div>
+        <button id="calTodayBtn"
+          class="flex items-center gap-1.5 rounded-full border border-blush-200 bg-white px-3.5 py-2 text-[11.5px] font-semibold text-blush-700 shadow-sm transition active:scale-95">
+          <i data-lucide="calendar-check" class="h-3.5 w-3.5"></i> Today
+        </button>
+      </header>
+
+      <!-- Phase banner -->
+      <div id="calPhaseBanner" class="mb-3"></div>
+
+      <!-- Month card -->
+      <div class="relative overflow-hidden rounded-[28px] border border-white/70 bg-white/95 shadow-[0_18px_50px_-24px_rgba(201,63,112,0.55)] backdrop-blur">
+        <div class="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blush-100/60 blur-2xl"></div>
+
+        <!-- Month nav -->
+        <div class="relative flex items-center justify-between px-4 pt-4">
+          <button id="calPrev" aria-label="Previous month"
+            class="flex h-9 w-9 items-center justify-center rounded-xl bg-blush-50 text-blush-600 transition active:scale-90 hover:bg-blush-100">
+            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+          </button>
+          <div class="text-center">
+            <h2 id="calTitle" class="font-display text-[18px] leading-tight text-ink">—</h2>
+            <p id="calSubtitle" class="mt-0.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-ink/50">—</p>
+          </div>
+          <button id="calNext" aria-label="Next month"
+            class="flex h-9 w-9 items-center justify-center rounded-xl bg-blush-50 text-blush-600 transition active:scale-90 hover:bg-blush-100">
+            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+          </button>
+        </div>
+
+        <!-- Weekday header -->
+        <div class="relative mt-3 grid grid-cols-7 gap-1 px-3 text-center">
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-ink/45">Sun</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-ink/45">Mon</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-ink/45">Tue</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-ink/45">Wed</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-ink/45">Thu</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-ink/45">Fri</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-ink/45">Sat</span>
+        </div>
+
+        <!-- Grid -->
+        <div id="calGrid" class="relative grid grid-cols-7 gap-1 px-3 pb-4 pt-1.5"></div>
+      </div>
+
+      <!-- Legend card -->
+      <div class="mt-3 rounded-[22px] border border-white bg-white/85 p-3.5 shadow-[0_8px_22px_-20px_rgba(201,63,112,0.7)]">
+        <p class="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/55">Legend</p>
+        <div id="calLegend" class="grid grid-cols-2 gap-x-3 gap-y-2 text-[11px] text-ink/70"></div>
+      </div>
+    </section>
+
+    <!-- ======================================================= ADD PERIOD -->
+    <section id="screen-add" class="screen">
+      <header class="mb-5 flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-blush-600">Log It</p>
+          <h1 class="mt-1.5 font-display text-[26px] text-ink">Add Period</h1>
+        </div>
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
+          <i data-lucide="plus-circle" class="h-5 w-5 text-blush-600"></i>
+        </div>
+      </header>
+
+      <form id="addForm" novalidate class="space-y-3">
+        <!-- start info -->
+        <div class="rounded-[26px] border border-white bg-white/90 p-5 shadow-[0_10px_30px_-22px_rgba(201,63,112,0.8)]">
+          <div class="mb-4 flex items-center gap-2.5">
+            <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blush-50 text-blush-600">
+              <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+            </span>
+            <div>
+              <h2 class="font-display text-[16px] leading-tight text-ink">Period Start</h2>
+              <p class="text-[10.5px] text-ink/50">When did it begin?</p>
+            </div>
+          </div>
+          <div class="space-y-3.5">
+            <div>
+              <label class="field-label" for="addStartDate">Start date</label>
+              <input id="addStartDate" type="date" class="input" />
+            </div>
+            <div>
+              <label class="field-label" for="addStartTime">Start time</label>
+              <input id="addStartTime" type="time" class="input" />
+            </div>
+          </div>
+        </div>
+
+        <!-- expected end -->
+        <div class="overflow-hidden rounded-[26px] border border-blush-200 bg-gradient-to-br from-blush-50 via-blush-50 to-lilac-50 p-5">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-blush-700">Expected End Date</p>
+                <span id="addDurationBadge" class="rounded-full bg-white/70 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-blush-700">—</span>
+              </div>
+              <p id="addExpectedEnd" class="mt-1.5 font-display text-[22px] leading-tight text-blush-700">—</p>
+              <p id="addExpectedHint" class="mt-1 text-[11.5px] leading-snug text-ink/60">Choose a start date to see your expected end date.</p>
+            </div>
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/80 shadow-sm">
+              <i data-lucide="sparkles" class="h-5 w-5 text-blush-600"></i>
+            </div>
+          </div>
+          <div class="mt-3 flex items-start gap-2 border-t border-blush-200 pt-2.5">
+            <i data-lucide="info" class="mt-0.5 h-3 w-3 shrink-0 text-blush-600"></i>
+            <p class="text-[11px] leading-relaxed text-ink/60">
+              This is an estimate — you can confirm your actual end date anytime.
+            </p>
+          </div>
+        </div>
+
+        <!-- flow + notes -->
+        <div class="rounded-[26px] border border-white bg-white/90 p-5 shadow-[0_10px_30px_-22px_rgba(201,63,112,0.8)]">
+          <div class="mb-3 flex items-center gap-2.5">
+            <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-lilac-50 text-lilac-600">
+              <i data-lucide="droplets" class="h-4 w-4"></i>
+            </span>
+            <div>
+              <h2 class="font-display text-[15px] leading-tight text-ink">How are you feeling?</h2>
+              <p class="text-[10.5px] text-ink/50">Optional details</p>
+            </div>
+          </div>
+
+          <p class="field-label">Flow Level</p>
+          <div id="flowPicker" class="grid grid-cols-3 gap-2"></div>
+
+          <div class="mt-4 flex items-center justify-between">
+            <p class="field-label mb-0">Personal Notes</p>
+            <span id="addNotesCount" class="text-[10px] font-medium text-ink/40">0/240</span>
+          </div>
+          <textarea id="addNotes" rows="3" maxlength="240" class="input mt-1.5" placeholder="Cramps, mood, symptoms, anything you want to remember…"></textarea>
+        </div>
+
+        <!-- actual end -->
+        <div id="addEndSection" class="rounded-[26px] border border-white bg-white/90 p-5 shadow-sm"></div>
+
+        <p id="addError" class="mt-3 hidden rounded-2xl bg-rose-50 px-4 py-3 text-[12.5px] font-medium text-rose-700 ring-1 ring-rose-100"></p>
+
+        <div class="mt-5 flex gap-3">
+          <button type="button" id="addCancel" class="btn-ghost flex-1">Cancel</button>
+          <button type="submit" id="addSave" class="btn-primary flex-[1.35] inline-flex items-center justify-center gap-1.5">
+            <i data-lucide="check" class="h-4 w-4"></i>Save Period
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- =========================================================== HISTORY -->
+    <section id="screen-history" class="screen">
+      <header class="mb-5">
+        <div class="flex items-start justify-between">
+          <div class="min-w-0">
+            <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-blush-600">Your Journey</p>
+            <h1 class="mt-1.5 font-display text-[26px] text-ink">History</h1>
+            <p class="mt-1 text-[11.5px] leading-snug text-ink/55">Every cycle, beautifully tracked.</p>
+          </div>
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blush-100 to-lilac-100 shadow-[0_8px_20px_-12px_rgba(201,63,112,0.8)]">
+            <i data-lucide="history" class="h-5 w-5 text-blush-600"></i>
+          </div>
+        </div>
+        <!-- Filter chips -->
+        <div class="mt-4 flex gap-2">
+          <button data-hist-filter="all" class="hist-chip hist-chip-active">All</button>
+          <button data-hist-filter="ongoing" class="hist-chip">Ongoing</button>
+          <button data-hist-filter="completed" class="hist-chip">Completed</button>
+        </div>
+      </header>
+
+      <!-- Highlighted summary card (avg cycle ring) -->
+      <div id="historyHighlight" class="mb-3"></div>
+
+      <!-- Compact stat grid -->
+      <div id="historyStats" class="grid grid-cols-2 gap-2.5"></div>
+
+      <div class="mt-6 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h2 class="text-[13px] font-semibold text-ink/70">Timeline</h2>
+          <span id="historyCount" class="rounded-full bg-blush-50 px-2 py-0.5 text-[10px] font-semibold text-blush-700">0</span>
+        </div>
+        <button id="clearAllBtn" class="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-semibold text-rose-600 ring-1 ring-rose-100 transition active:scale-95">
+          <i data-lucide="trash-2" class="h-3 w-3"></i> Clear all
+        </button>
+      </div>
+
+      <div id="historyList" class="relative mt-4"></div>
+    </section>
+
+  </main>
+
+      <!-- App Footer -->
+      <footer class="mt-6 pb-24 text-center text-[11px] font-medium tracking-wide text-[#b7a2ad]">
+        Developed By ~ <span class="font-semibold text-blush-500">Shankar Prasad Pyke</span>
+      </footer>
+
+  <!-- ============================================================== NAV -->
+  <nav class="fixed inset-x-0 bottom-0 z-40">
+    <div class="mx-auto w-full max-w-md px-4 safe-bottom">
+      <div class="rounded-[24px] border border-white bg-white/50 p-2 shadow-[0_-10px_40px_-14px_rgba(201,63,112,0.45)] backdrop-blur-2xl">
+        <div class="relative">
+          <div id="navPill"
+               class="pointer-events-none absolute inset-y-0 rounded-2xl bg-gradient-to-br from-blush-100 to-lilac-100 transition-all duration-300 ease-out"
+               style="width:25%; left:0%;"></div>
+          <div class="relative grid grid-cols-4">
+            <button data-tab="home" class="nav-btn flex flex-col items-center gap-1 rounded-2xl py-2 text-ink/50 transition-colors">
+              <i data-lucide="home" class="h-[19px] w-[19px]"></i>
+              <span class="text-[10px] font-semibold tracking-wide">Home</span>
+            </button>
+            <button data-tab="calendar" class="nav-btn flex flex-col items-center gap-1 rounded-2xl py-2 text-ink/50 transition-colors">
+              <i data-lucide="calendar-days" class="h-[19px] w-[19px]"></i>
+              <span class="text-[10px] font-semibold tracking-wide">Calendar</span>
+            </button>
+            <button data-tab="add" class="nav-btn flex flex-col items-center gap-1 rounded-2xl py-2 text-ink/50 transition-colors">
+              <i data-lucide="plus-circle" class="h-[19px] w-[19px]"></i>
+              <span class="text-[10px] font-semibold tracking-wide">Add</span>
+            </button>
+            <button data-tab="history" class="nav-btn flex flex-col items-center gap-1 rounded-2xl py-2 text-ink/50 transition-colors">
+              <i data-lucide="history" class="h-[19px] w-[19px]"></i>
+              <span class="text-[10px] font-semibold tracking-wide">History</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+</div>
+
+<!-- ============================================================ MODAL -->
+<div id="modalRoot" class="fixed inset-0 z-50 hidden">
+  <div id="modalBackdrop" class="absolute inset-0 bg-ink/25 opacity-0 backdrop-blur-[2px] transition-opacity duration-200"></div>
+  <div class="absolute inset-x-0 bottom-0 mx-auto w-full max-w-md px-3 safe-bottom">
+    <div class="relative">
+      <div id="modalPanel"
+           class="no-scrollbar max-h-[86vh] translate-y-8 overflow-y-auto rounded-[28px] bg-white p-6 opacity-0 shadow-2xl transition-all duration-300"></div>
+      <button id="modalScrollTopBtn" type="button" aria-label="Scroll to top"
+              class="pointer-events-none absolute right-3 bottom-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-blush-700 opacity-0 shadow-[0_10px_24px_-10px_rgba(201,63,112,0.8)] ring-1 ring-blush-200 backdrop-blur transition-all duration-300 translate-y-2">
+        <i data-lucide="arrow-up" class="h-4 w-4"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== PWA INSTALL -->
+<div id="pwaInstallRoot" class="fixed inset-x-0 bottom-0 z-[60] hidden">
+  <div class="mx-auto w-full max-w-md px-3 safe-bottom">
+    <div id="pwaInstallCard"
+         class="translate-y-6 rounded-[24px] border border-blush-200 bg-white p-4 opacity-0 shadow-[0_18px_45px_-18px_rgba(201,63,112,0.7)] transition-all duration-300">
+      <div class="flex items-start gap-3">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blush-200 to-lilac-200">
+          <i data-lucide="flower-2" class="h-5 w-5 text-blush-700"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="font-display text-[15px] leading-tight text-ink">Install Femora</p>
+          <p class="mt-0.5 text-[11.5px] leading-snug text-ink/60">
+            Add it to your home screen for quick, offline access.
+          </p>
+        </div>
+        <button type="button" id="pwaDismissBtn" aria-label="Not now"
+                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blush-50 text-blush-600 transition active:scale-90">
+          <i data-lucide="x" class="h-3.5 w-3.5"></i>
+        </button>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button type="button" id="pwaLaterBtn" class="btn-ghost flex-1 !py-2.5 !text-[12.5px]">Not now</button>
+        <button type="button" id="pwaInstallBtn" class="btn-primary flex-[1.35] inline-flex items-center justify-center gap-1.5 !py-2.5 !text-[12.5px]">
+          <i data-lucide="download" class="h-3.5 w-3.5"></i> Install
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ====================================================== END PWA INSTALL -->
+
+<script>
+/* ============================================================================
+   1. DATE UTILITIES  (all local, no UTC drift)
+   ========================================================================== */
+const MS_DAY = 86400000;
+const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+const pad2 = n => String(n).padStart(2, '0');
+
+/** 'YYYY-MM-DD' -> Date at LOCAL NOON (immune to DST / timezone shifts) */
+function isoToDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0, 0);
+}
+function dateToISO(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function todayISO() { return dateToISO(new Date()); }
+function addDays(iso, n) {
+  const d = isoToDate(iso);
+  d.setDate(d.getDate() + n);
+  return dateToISO(d);
+}
+/** b - a in whole days */
+function diffDays(a, b) {
+  return Math.round((isoToDate(b).getTime() - isoToDate(a).getTime()) / MS_DAY);
+}
+function isISO(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+
+function fmtLong(iso) {
+  if (!isISO(iso)) return '—';
+  const d = isoToDate(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtMedium(iso) {
+  if (!isISO(iso)) return '—';
+  const d = isoToDate(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+function fmtTime(t) {
+  if (!t || !/^\d{2}:\d{2}$/.test(t)) return '—';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${pad2(m)} ${ampm}`;
+}
+function nowTime() {
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function plural(n, word) { return `${n} ${word}${n === 1 ? '' : 's'}`; }
+
+/** Human-readable relative time for a date, e.g. "Today", "3 days ago", "2 weeks ago" */
+function relativeDays(iso) {
+  const d = diffDays(iso, todayISO()); // positive = past
+  if (d === 0) return 'Today';
+  if (d === 1) return 'Yesterday';
+  if (d < 0)  return `In ${plural(Math.abs(d), 'day')}`;
+  if (d < 7)  return `${plural(d, 'day')} ago`;
+  if (d < 30) {
+    const w = Math.round(d / 7);
+    return `${plural(w, 'week')} ago`;
+  }
+  if (d < 365) {
+    const m = Math.round(d / 30);
+    return `${plural(m, 'month')} ago`;
+  }
+  const y = Math.round(d / 365);
+  return `${plural(y, 'year')} ago`;
+}
+
+/** Short weekday, e.g. "Mon" */
+function shortWeekday(iso) {
+  if (!isISO(iso)) return '';
+  return WEEKDAYS[isoToDate(iso).getDay()].slice(0, 3);
+}
+
+/* ============================================================================
+   2. STATE + STORAGE
+   ========================================================================== */
+const STORAGE_KEY = 'femora.data.v1';
+
+let state = { periods: [] };
+
+const ui = {
+  tab: 'home',
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  selectedDate: null,
+  histFilter: 'all'   // 'all' | 'ongoing' | 'completed'
+};
+
+let addFlow = 'medium';
+
+const FLOWS = [
+  { key: 'light',  label: 'Light',  icon: 'droplet'  },
+  { key: 'medium', label: 'Medium', icon: 'droplets' },
+  { key: 'heavy',  label: 'Heavy',  icon: 'waves'    }
+];
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function normalizePeriod(p) {
+  let endDate = isISO(p.endDate) ? p.endDate : null;
+  // safety: an end date can never precede the start date
+  if (endDate && endDate < p.startDate) endDate = null;
+
+  return {
+    id: p.id || genId(),
+    startDate: p.startDate,
+    startTime: /^\d{2}:\d{2}$/.test(p.startTime || '') ? p.startTime : '09:00',
+    endDate,
+    endTime: endDate ? (/^\d{2}:\d{2}$/.test(p.endTime || '') ? p.endTime : '09:00') : null,
+    flow: FLOWS.some(f => f.key === p.flow) ? p.flow : 'medium',
+    notes: typeof p.notes === 'string' ? p.notes.slice(0, 240) : '',
+    autoEnded: !!p.autoEnded,
+    createdAt: typeof p.createdAt === 'number' ? p.createdAt : Date.now()
+  };
+}
+
+function isValidRecord(p) {
+  return p && isISO(p.startDate) && (!p.endDate || isISO(p.endDate));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+
+    const parsed = JSON.parse(raw);
+
+    if (parsed && Array.isArray(parsed.periods)) {
+      state.periods = parsed.periods
+        .filter(isValidRecord)
+        .map(normalizePeriod);
+
+      sortPeriods();
+    }
+  } catch (e) {
+    console.warn('Femora: could not load saved data.', e);
+    state.periods = [];
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    toast('Could not save your data on this device.', 'error');
+  }
+}
+
+function sortPeriods() {
+  state.periods.sort((a, b) =>
+    a.startDate.localeCompare(b.startDate) || (a.startTime || '').localeCompare(b.startTime || '')
+  );
+}
+
+/* ============================================================================
+   3. CALCULATION ENGINE
+   ========================================================================== */
+function getStats() {
+  const periods = [...state.periods].sort((a, b) =>
+    a.startDate.localeCompare(b.startDate) || (a.startTime || '').localeCompare(b.startTime || '')
+  );
+
+  // Include auto-ended periods — they have a real end date, so they belong in the averages.
+  const completed = periods.filter(p => !!p.endDate);
+
+  const durations = completed
+    .map(p => diffDays(p.startDate, p.endDate) + 1)
+    .filter(n => n > 0);
+
+  const cycleLens = [];
+  for (let i = 1; i < periods.length; i++) {
+    const len = diffDays(periods[i - 1].startDate, periods[i].startDate);
+    if (len > 0) cycleLens.push(len);
+  }
+
+  const avgDuration = durations.length
+    ? Math.max(1, Math.round(durations.reduce((a, b) => a + b, 0) / durations.length))
+    : 5;
+
+  const avgCycle = cycleLens.length
+    ? Math.max(1, Math.round(cycleLens.reduce((a, b) => a + b, 0) / cycleLens.length))
+    : 28;
+
+  const last = periods.length ? periods[periods.length - 1] : null;
+  const ongoing = periods.find(p => !p.endDate) || null;
+
+  return {
+    periods,
+    completed,
+    durations,
+    cycleLens,
+    avgDuration,
+    avgCycle,
+    hasDurationData: durations.length > 0,
+    hasCycleData: cycleLens.length > 0,
+    last,
+    ongoing,
+    total: periods.length,
+    nextStart: last ? addDays(last.startDate, avgCycle) : null,
+    shortest: durations.length ? Math.min(...durations) : null,
+    longest: durations.length ? Math.max(...durations) : null
+  };
+}
+
+/** Expected end date = start + (avg duration - 1) */
+function expectedEnd(startDate, avgDuration) {
+  return addDays(startDate, Math.max(1, avgDuration) - 1);
+}
+
+
+/** Predicted future period ranges (next 4 cycles) */
+function getPredictedRanges(stats) {
+  if (!stats.last) return [];
+  const ranges = [];
+  let start = addDays(stats.last.startDate, stats.avgCycle);
+  for (let i = 0; i < 4; i++) {
+    ranges.push({ start, end: addDays(start, Math.max(1, stats.avgDuration) - 1) });
+    start = addDays(start, stats.avgCycle);
+  }
+  return ranges;
+}
+
+/** Sets of ISO strings for actual / predicted period days */
+function buildDayMap(stats) {
+  const actual = new Set();
+  const today = todayISO();
+
+  stats.periods.forEach(p => {
+    const end = p.endDate || today;
+    let cur = p.startDate;
+    let guard = 0;
+    while (diffDays(cur, end) >= 0 && guard < 500) {
+      actual.add(cur);
+      cur = addDays(cur, 1);
+      guard++;
+    }
+  });
+
+  const predicted = new Set();
+  getPredictedRanges(stats).forEach(r => {
+    let cur = r.start;
+    let guard = 0;
+    while (diffDays(cur, r.end) >= 0 && guard < 60) {
+      if (!actual.has(cur)) predicted.add(cur);
+      cur = addDays(cur, 1);
+      guard++;
+    }
+  });
+
+  return { actual, predicted };
+}
+
+/** Cycle length map: periodId -> days since previous start */
+function buildCycleMap() {
+  const asc = [...state.periods].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const map = {};
+  for (let i = 1; i < asc.length; i++) {
+    map[asc[i].id] = diffDays(asc[i - 1].startDate, asc[i].startDate);
+  }
+  return map;
+}
+
+/* ============================================================================
+   4. VALIDATION
+   ========================================================================== */
+function validateNew(startDate) {
+  const today = todayISO();
+  if (!isISO(startDate)) return 'Please choose a valid start date.';
+  if (startDate > today) return 'The start date cannot be in the future.';
+
+  const stats = getStats();
+  if (stats.ongoing) return 'You already have an ongoing period. Please mark it as ended first.';
+
+  if (state.periods.some(p => p.startDate === startDate)) {
+    return 'You already have a period recorded starting on this date.';
+  }
+
+  for (const p of state.periods) {
+    const pEnd = p.endDate || today;
+    if (startDate >= p.startDate && startDate <= pEnd) {
+      return `This date falls inside an existing period (${fmtLong(p.startDate)} – ${fmtLong(pEnd)}).`;
+    }
+  }
+
+  const expEnd = expectedEnd(startDate, stats.avgDuration);
+  for (const p of state.periods) {
+    if (p.startDate > startDate && p.startDate <= expEnd) {
+      return `This would overlap the period starting ${fmtLong(p.startDate)}.`;
+    }
+  }
+  return null;
+}
+
+function validateEdit(id, startDate, endDate) {
+  const today = todayISO();
+  if (!isISO(startDate)) return 'Please choose a valid start date.';
+  if (startDate > today) return 'The start date cannot be in the future.';
+
+  if (endDate) {
+    if (!isISO(endDate)) return 'Please choose a valid end date.';
+    if (endDate < startDate) return 'The end date cannot be before the start date.';
+    if (endDate > today) return 'The end date cannot be in the future.';
+  }
+
+  const others = state.periods.filter(p => p.id !== id);
+
+  if (others.some(p => p.startDate === startDate)) {
+    return 'Another record already starts on this date.';
+  }
+
+  if (!endDate && others.some(p => !p.endDate)) {
+    return 'You already have another ongoing period.';
+  }
+
+  const effEnd = endDate || today;
+  for (const p of others) {
+    const pEnd = p.endDate || today;
+    if (startDate <= pEnd && effEnd >= p.startDate) {
+      return `This overlaps your period from ${fmtLong(p.startDate)}${p.endDate ? ` to ${fmtLong(pEnd)}` : ''}.`;
+    }
+  }
+  return null;
+}
+
+/* ============================================================================
+   5. TOAST
+   ========================================================================== */
+function toast(message, type = 'success') {
+  const wrap = document.createElement('div');
+  wrap.className = 'pointer-events-none fixed inset-x-0 top-3 z-[80] flex justify-center px-4';
+  const inner = document.createElement('div');
+  inner.className =
+    'pointer-events-auto max-w-md rounded-2xl px-4 py-3 text-[12.5px] font-medium shadow-xl opacity-0 -translate-y-3 transition-all duration-300 ' +
+    (type === 'error' ? 'bg-rose-600 text-white' : 'bg-ink text-white');
+  inner.textContent = message;
+  wrap.appendChild(inner);
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => inner.classList.remove('opacity-0', '-translate-y-3'));
+  setTimeout(() => {
+    inner.classList.add('opacity-0', '-translate-y-3');
+    setTimeout(() => wrap.remove(), 320);
+  }, 2600);
+}
+
+/* ============================================================================
+   6. ICONS
+   ========================================================================== */
+function refreshIcons() {
+  if (!window.lucide || typeof window.lucide.createIcons !== 'function') return;
+
+  // Pass 1: try the batch (fast path). If it throws, fall back to per-icon.
+  try {
+    window.lucide.createIcons();
+    return;
+  } catch (e) { /* fall through to safe mode */ }
+
+  // Safe mode: replace each icon individually so one bad name can't blank the rest.
+  document.querySelectorAll('i[data-lucide]').forEach(el => {
+    const name = el.getAttribute('data-lucide');
+    try {
+      const svg = window.lucide.icons?.[name] || null;
+      if (!svg) { el.style.display = 'none'; return; }   // hide rather than break layout
+      window.lucide.createIcons({ nameAttr: 'data-lucide' });
+    } catch (_) {
+      el.style.display = 'none';
+    }
+  });
+}
+
+/* ============================================================================
+   7. MODAL / SHEET
+   ========================================================================== */
+const modalRoot = document.getElementById('modalRoot');
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalPanel = document.getElementById('modalPanel');
+let modalTimer = null;
+
+/* Optional "return" callback: re-opens a parent sheet after a child sheet closes.
+   Used so actions launched from the "All Periods" sheet come back to it. */
+let modalReturn = null;
+
+/**
+ * Close the current sheet, then invoke a pending return handler (if any)
+ * after the close animation finishes, re-opening the parent sheet.
+ */
+function closeSheetAndReturn() {
+  const ret = modalReturn;
+  modalReturn = null;
+  closeSheet();
+  if (typeof ret === 'function') {
+    setTimeout(ret, 280);
+  }
+}
+
+/** Clear any pending return handler (call when intentionally navigating elsewhere). */
+function clearModalReturn() {
+  modalReturn = null;
+}
+
+function openSheet(html, onMount) {
+  if (modalTimer) { clearTimeout(modalTimer); modalTimer = null; }
+  modalPanel.innerHTML = html;
+  modalRoot.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  refreshIcons();
+
+  // reset scroll position on every new sheet open
+  modalPanel.scrollTop = 0;
+  updateModalScrollTopBtn();
+
+  setTimeout(() => {
+    modalBackdrop.classList.remove('opacity-0');
+    modalBackdrop.classList.add('opacity-100');
+    modalPanel.classList.remove('translate-y-8', 'opacity-0');
+  }, 15);
+
+  if (typeof onMount === 'function') onMount(modalPanel);
+}
+
+function closeSheet() {
+  modalBackdrop.classList.remove('opacity-100');
+  modalBackdrop.classList.add('opacity-0');
+  modalPanel.classList.add('translate-y-8', 'opacity-0');
+  modalTimer = setTimeout(() => {
+    modalRoot.classList.add('hidden');
+    modalPanel.innerHTML = '';
+    // Only unlock if no new sheet was opened during the close animation
+    if (modalRoot.classList.contains('hidden')) {
+      document.body.classList.remove('modal-open');
+    }
+    modalTimer = null;
+    // If no one consumed the return handler in time, drop it
+    if (modalReturn) {
+      modalReturn = null;
+    }
+    updateModalScrollTopBtn();
+  }, 260);
+}
+
+/* ---------- modal scroll-to-top button ---------- */
+const modalScrollTopBtn = document.getElementById('modalScrollTopBtn');
+
+function updateModalScrollTopBtn() {
+  if (!modalScrollTopBtn) return;
+  const show = !modalRoot.classList.contains('hidden') && modalPanel.scrollTop > 200;
+  modalScrollTopBtn.classList.toggle('is-visible', show);
+}
+
+if (modalScrollTopBtn) {
+  modalScrollTopBtn.addEventListener('click', () => {
+    modalPanel.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+modalPanel.addEventListener('scroll', updateModalScrollTopBtn, { passive: true });
+
+modalBackdrop.addEventListener('click', () => {
+  // Backdrop tap = intentional dismissal → no return
+  clearModalReturn();
+  closeSheet();
+});
+
+modalRoot.addEventListener('click', e => {
+  if (e.target.closest('[data-close]')) {
+    // X / Cancel buttons = "back to All Periods" if we came from there
+    closeSheetAndReturn();
+  }
+});
+
+function sheetHeader(title) {
+  return `
+    <div class="mb-4 flex items-start justify-between gap-3">
+      <h3 class="font-display text-[20px] leading-tight text-ink">${title}</h3>
+      <button type="button" data-close
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blush-50 text-blush-600 transition active:scale-90">
+        <i data-lucide="x" class="h-4 w-4"></i>
+      </button>
+    </div>`;
+}
+
+/* ============================================================================
+   8. NAVIGATION
+   ========================================================================== */
+const TAB_ORDER = ['home', 'calendar', 'add', 'history'];
+
+function switchTab(tab) {
+  if (!TAB_ORDER.includes(tab)) tab = 'home';
+  ui.tab = tab;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('screen-' + tab);
+  if (target) {
+    target.classList.add('active');
+    // re-trigger the entrance animation
+    target.style.animation = 'none';
+    void target.offsetWidth;
+    target.style.animation = '';
+  }
+
+  const idx = TAB_ORDER.indexOf(tab);
+  const pill = document.getElementById('navPill');
+  if (pill) pill.style.left = (idx * 25) + '%';
+
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    const active = btn.dataset.tab === tab;
+    btn.classList.toggle('text-blush-700', active);
+    btn.classList.toggle('text-ink/50', !active);
+  });
+
+  if (tab === 'add') {
+    updateAddExpectedEnd();
+    updateNotesCounter();
+  }
+  if (tab === 'history') {
+    document.querySelectorAll('[data-hist-filter]').forEach(b => {
+      b.classList.toggle('hist-chip-active', b.dataset.histFilter === ui.histFilter);
+    });
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  refreshIcons();
+}
+
+document.querySelectorAll('[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+/* History filter chips (delegated — survives re-renders) */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-hist-filter]');
+  if (!btn) return;
+  ui.histFilter = btn.dataset.histFilter;
+  document.querySelectorAll('[data-hist-filter]').forEach(b => {
+    b.classList.toggle('hist-chip-active', b.dataset.histFilter === ui.histFilter);
+  });
+  renderHistory();
+  refreshIcons();
+});
+
+/* ============================================================================
+   9. HOME RENDER
+   ========================================================================== */
+function renderHome() {
+  const stats = getStats();
+  const today = todayISO();
+
+  /* --- date line + greeting --- */
+  const now = new Date();
+  document.getElementById('homeDate').textContent =
+    `${WEEKDAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`.toUpperCase();
+
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greetLine = stats.ongoing
+    ? 'Take it slow today — you’re doing great.'
+    : stats.last
+      ? `Day ${Math.max(1, diffDays(stats.last.startDate, today) + 1)} of your cycle.`
+      : 'Let’s start tracking your cycle.';
+  document.getElementById('homeGreeting').textContent = `${greeting}. ${greetLine}`;
+
+  /* --- avatar badge (dot when ongoing) --- */
+  const badge = document.getElementById('homeAvatarBadge');
+  if (badge) badge.classList.toggle('hidden', !stats.ongoing);
+
+  /* --- hero card --- */
+  const hero = document.getElementById('heroCard');
+
+  if (stats.ongoing) {
+    const p = stats.ongoing;
+    const dayNum = Math.max(1, diffDays(p.startDate, today) + 1);
+    const expEnd = expectedEnd(p.startDate, stats.avgDuration);
+    const toGo = Math.max(0, diffDays(today, expEnd));
+    const remainText = toGo === 0
+      ? 'Expected to end today'
+      : `${plural(toGo, 'day')} to go (estimated)`;
+
+    hero.innerHTML = `
+      <div class="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-lilac-600 via-lilac-500 to-blush-500 p-6 text-white shadow-[0_18px_45px_-18px_rgba(122,85,194,0.9)]">
+        <div class="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10"></div>
+        <div class="pointer-events-none absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-white/5"></div>
+        <div class="relative">
+          <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90">Your Period is Ongoing</p>
+          <div class="mt-2 flex items-end gap-2">
+            <span class="font-display text-[36px] font-semibold leading-none">Day ${dayNum}</span>
+            <span class="mb-1 text-[13px] text-white/90">of your period</span>
+          </div>
+          <div class="mt-4 rounded-2xl bg-white/20 px-4 py-3 backdrop-blur-sm">
+            <p class="text-[13px]">Expected to end: <span class="font-semibold">${fmtMedium(expEnd)}</span></p>
+            <p class="mt-0.5 text-[11.5px] text-white/90">${remainText}</p>
+          </div>
+        </div>
+      </div>`;
+  } else if (!stats.last) {
+    hero.innerHTML = `
+      <div class="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-blush-600 via-blush-500 to-lilac-500 p-6 text-white shadow-[0_18px_45px_-18px_rgba(201,63,112,0.9)]">
+        <div class="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10"></div>
+        <div class="relative">
+          <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20">
+            <i data-lucide="flower-2" class="h-5 w-5 text-white"></i>
+          </div>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90">Welcome to Femora</p>
+          <h2 class="mt-1.5 font-display text-[22px] leading-snug">Let's begin your journey</h2>
+          <p class="mt-2 max-w-[280px] text-[12.5px] leading-relaxed text-white/95">
+            Record your first period and Femora will start predicting your cycle.
+          </p>
+          <button id="heroAddFirst"
+            class="mt-4 rounded-full bg-white px-5 py-2.5 text-[12.5px] font-semibold text-blush-700 shadow-sm transition active:scale-95">
+            Add your first period
+          </button>
+        </div>
+      </div>`;
+    const btn = document.getElementById('heroAddFirst');
+    if (btn) btn.addEventListener('click', () => switchTab('add'));
+  } else {
+    const cycleDay = Math.max(1, diffDays(stats.last.startDate, today) + 1);
+    const progress = Math.min(1, cycleDay / Math.max(1, stats.avgCycle));
+    const circumference = 263.9;
+    const dashOffset = circumference * (1 - progress);
+    const daysUntil = diffDays(today, stats.nextStart);
+
+    let bigNum, smallLabel, subLine;
+    if (daysUntil > 0) {
+      bigNum = String(daysUntil);
+      smallLabel = daysUntil === 1 ? 'day' : 'days';
+      subLine = `${plural(daysUntil, 'day')} remaining`;
+    } else if (daysUntil === 0) {
+      bigNum = '0';
+      smallLabel = 'days';
+      subLine = 'Expected period is today';
+    } else {
+      bigNum = String(Math.abs(daysUntil));
+      smallLabel = 'late';
+      subLine = 'Your period is later than predicted';
+    }
+
+    hero.innerHTML = `
+      <div class="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-blush-600 via-blush-500 to-lilac-500 p-6 text-white shadow-[0_18px_45px_-18px_rgba(201,63,112,0.9)]">
+        <div class="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10"></div>
+        <div class="pointer-events-none absolute -bottom-16 -left-12 h-44 w-44 rounded-full bg-white/5"></div>
+        <div class="relative flex items-center gap-5">
+          <div class="relative h-[92px] w-[92px] shrink-0">
+            <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="7"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"
+                      stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset.toFixed(1)}"
+                      style="transition: stroke-dashoffset .8s cubic-bezier(.22,.8,.32,1)"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="font-display text-[26px] font-semibold leading-none">${bigNum}</span>
+              <span class="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/90">${smallLabel}</span>
+            </div>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90">Next Period Expected</p>
+            <p class="mt-1 font-display text-[21px] leading-tight">${fmtMedium(stats.nextStart)}</p>
+            <p class="mt-1.5 text-[12.5px] text-white/95">${subLine}</p>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* --- info cards (compact 3-up chips) --- */
+  const info = document.getElementById('infoCards');
+
+  const lastDurationRecord = stats.completed.length
+    ? stats.completed[stats.completed.length - 1]
+    : null;
+  const lastDuration = lastDurationRecord
+    ? diffDays(lastDurationRecord.startDate, lastDurationRecord.endDate) + 1
+    : null;
+
+  const sinceLast = stats.last ? diffDays(stats.last.startDate, today) : null;
+  const sinceText = sinceLast === null
+    ? 'No records'
+    : sinceLast === 0 ? 'Today' : `${plural(sinceLast, 'day')} ago`;
+
+  const cards = [
+    { icon: 'calendar-check', label: 'Last',     value: stats.last ? fmtMedium(stats.last.startDate) : '—',            sub: sinceText,             tone: 'blush' },
+    { icon: 'repeat-2',       label: 'Cycle',    value: plural(stats.avgCycle, 'day'),                                     sub: stats.hasCycleData ? 'From history' : 'Estimate', tone: 'lilac' },
+    { icon: 'clock-3',        label: 'Bleed',    value: lastDuration !== null ? `${lastDuration}d` : (stats.ongoing ? 'Now' : '—'), sub: lastDuration !== null ? 'Avg length' : 'No data',   tone: 'blush' }
+  ];
+
+  info.innerHTML = cards.map((c, i) => `
+    <div class="pop-in rounded-[18px] border border-white bg-white/90 px-3 py-3 shadow-[0_8px_22px_-18px_rgba(201,63,112,0.8)]"
+         style="animation-delay:${i * 45}ms">
+      <div class="mb-1.5 flex h-6 w-6 items-center justify-center rounded-lg ${c.tone === 'blush' ? 'bg-blush-50 text-blush-600' : 'bg-lilac-50 text-lilac-600'}">
+        <i data-lucide="${c.icon}" class="h-3 w-3"></i>
+      </div>
+      <p class="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-ink/55">${c.label}</p>
+      <p class="mt-0.5 font-display text-[14px] leading-tight text-ink">${c.value}</p>
+      <p class="mt-0.5 text-[10px] leading-snug text-ink/55">${c.sub}</p>
+    </div>`).join('');
+
+  /* --- cycle phase strip --- */
+  const phaseEl = document.getElementById('phaseStrip');
+  if (phaseEl) {
+    if (!stats.last) {
+      phaseEl.innerHTML = '';
+    } else {
+      const day = Math.max(1, diffDays(stats.last.startDate, today) + 1);
+      const len = Math.max(1, stats.avgCycle);
+      const pct = Math.min(100, Math.round((day / len) * 100));
+      const cycleDayLabel = Math.min(day, len); // clamp so the badge never reads "Day 31/28"
+
+      let phaseName = 'Follicular', phaseColor = 'from-lilac-400 to-lilac-500';
+      if (stats.ongoing) {
+        phaseName = 'Menstrual'; phaseColor = 'from-blush-500 to-blush-600';
+      } else if (day > len - 16 && day <= len - 11) {
+        phaseName = 'Ovulation'; phaseColor = 'from-emerald-400 to-emerald-500';
+      } else if (day > len - 11) {
+        phaseName = 'Luteal'; phaseColor = 'from-amber-400 to-amber-500';
+      }
+
+      phaseEl.innerHTML = `
+        <div class="rounded-[20px] border border-white bg-white/90 p-3.5 shadow-[0_10px_26px_-20px_rgba(201,63,112,0.8)]">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="sparkle" class="h-3.5 w-3.5 text-blush-600"></i>
+              <span class="text-[11px] font-semibold text-ink/70">${phaseName} phase</span>
+            </div>
+            <span class="rounded-full bg-blush-50 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-blush-700">Day ${cycleDayLabel}/${len}</span>
+          </div>
+          <div class="h-1.5 w-full overflow-hidden rounded-full bg-blush-100">
+            <div class="h-full rounded-full bg-gradient-to-r ${phaseColor} transition-all duration-700" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }
+  }
+
+  /* --- insight card --- */
+  const insightEl = document.getElementById('insightCard');
+  if (insightEl) {
+    let insight = '';
+    if (!stats.last) {
+      insight = 'Log your first period to unlock predictions, phase insights and cycle trends.';
+    } else if (stats.ongoing) {
+      const day = Math.max(1, diffDays(stats.ongoing.startDate, today) + 1);
+      insight = `Day ${day} of your period. Stay hydrated and rest when you need to.`;
+    } else if (!stats.hasCycleData) {
+      insight = 'Add one more period and we’ll start calculating your personal cycle length.';
+    } else {
+      // Don't echo the "Upcoming" card — surface something actionable instead.
+      insight = stats.avgCycle < 21 || stats.avgCycle > 35
+        ? `Your average cycle is ${plural(stats.avgCycle, 'day')}. Cycles outside 21–35 days are worth mentioning to a doctor.`
+        : stats.avgDuration > 7
+          ? `Your periods average ${plural(stats.avgDuration, 'day')}. Bleeding longer than 7 days is worth discussing with a clinician.`
+          : stats.cycleLens.length < 2
+            ? `First cycle length logged: ${plural(stats.avgCycle, 'day')}. A couple more periods will let us spot a real pattern.`
+            : `Your cycle looks regular at ~${plural(stats.avgCycle, 'day')}. Keep logging to sharpen predictions.`;
+    }
+    insightEl.innerHTML = `
+      <div class="flex items-start gap-2.5 rounded-[20px] border border-blush-200/70 bg-gradient-to-br from-blush-50 to-lilac-50 px-3.5 py-3">
+        <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80">
+          <i data-lucide="lightbulb" class="h-3.5 w-3.5 text-blush-600"></i>
+        </span>
+        <p class="text-[11.5px] leading-relaxed text-ink/70">${insight}</p>
+      </div>`;
+  }
+
+  /* --- quick action states --- */
+  const qaStart = document.getElementById('qaStart');
+  const qaEnd = document.getElementById('qaEnd');
+  if (qaStart) {
+    const blocked = !!stats.ongoing;
+    qaStart.disabled = blocked;
+    qaStart.classList.toggle('opacity-40', blocked);
+    qaStart.classList.toggle('pointer-events-none', blocked);
+  }
+  if (qaEnd) {
+    const blocked = !stats.ongoing;
+    qaEnd.disabled = blocked;
+    qaEnd.classList.toggle('opacity-40', blocked);
+    qaEnd.classList.toggle('pointer-events-none', blocked);
+  }
+
+  /* --- upcoming section --- */
+  const up = document.getElementById('upcomingSection');
+  if (!stats.last) {
+    up.innerHTML = `
+      <div class="rounded-[24px] border border-blush-200 bg-white/80 p-5 text-center">
+        <div class="mx-auto mb-2.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-blush-50">
+          <i data-lucide="sparkles" class="h-5 w-5 text-blush-600"></i>
+        </div>
+        <p class="font-display text-[15px] text-ink">No predictions yet</p>
+        <p class="mx-auto mt-1 max-w-[250px] text-[11.5px] leading-relaxed text-ink/60">
+          Record your first period and we'll start predicting your next one.
+        </p>
+      </div>`;
+  } else {
+    const nextEnd = expectedEnd(stats.nextStart, stats.avgDuration);
+    const daysUntil = diffDays(today, stats.nextStart);
+    let note;
+    if (daysUntil > 0) note = `${plural(daysUntil, 'day')} until your next expected period.`;
+    else if (daysUntil === 0) note = 'Your next period is expected today.';
+    else note = `Your period is ${plural(Math.abs(daysUntil), 'day')} later than predicted.`;
+
+    up.innerHTML = `
+      <div class="rounded-[24px] border border-white bg-white/90 p-5 shadow-[0_10px_30px_-22px_rgba(201,63,112,0.8)]">
+        <div class="mb-3 flex items-center gap-2">
+          <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-lilac-50">
+            <i data-lucide="calendar-clock" class="h-3.5 w-3.5 text-lilac-600"></i>
+          </div>
+          <h2 class="text-[12.5px] font-semibold text-ink/70">Upcoming</h2>
+          <span class="ml-auto rounded-full bg-lilac-50 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-lilac-600">Estimated</span>
+        </div>
+        <div class="space-y-2.5">
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="text-[12px] text-ink/60">Next period</span>
+            <span class="text-right text-[13px] font-semibold text-ink">${fmtLong(stats.nextStart)}</span>
+          </div>
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="text-[12px] text-ink/60">Expected end</span>
+            <span class="text-right text-[13px] font-semibold text-ink">${fmtLong(nextEnd)}</span>
+          </div>
+        </div>
+        <p class="mt-3 rounded-xl bg-blush-50 px-3 py-2 text-[11.5px] leading-relaxed text-blush-700">${note}</p>
+        <button id="gotoCalendar"
+          class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-blush-200 bg-white py-2.5 text-[12px] font-semibold text-blush-700 transition active:scale-[.98]">
+          View calendar <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+        </button>
+      </div>`;
+    const gc = document.getElementById('gotoCalendar');
+    if (gc) gc.addEventListener('click', () => switchTab('calendar'));
+  }
+
+  refreshIcons();
+}
+
+/* ============================================================================
+   10. CALENDAR RENDER
+   ========================================================================== */
+function renderCalendar() {
+  const stats = getStats();
+  const { actual, predicted } = buildDayMap(stats);
+  const today = todayISO();
+
+  /* ---- header / subtitle ---- */
+  document.getElementById('calTitle').textContent = `${MONTHS[ui.calMonth]} ${ui.calYear}`;
+
+  const monthPrefix = `${ui.calYear}-${pad2(ui.calMonth + 1)}`;
+  let actualInMonth = 0, predictedInMonth = 0;
+  actual.forEach(d => { if (d.startsWith(monthPrefix)) actualInMonth++; });
+  predicted.forEach(d => { if (d.startsWith(monthPrefix)) predictedInMonth++; });
+
+  const sub = document.getElementById('calSubtitle');
+  if (sub) {
+    const bits = [];
+    if (actualInMonth) bits.push(`${actualInMonth} logged`);
+    if (predictedInMonth) bits.push(`${predictedInMonth} predicted`);
+    sub.textContent = bits.length ? bits.join(' · ') : 'No period days this month';
+  }
+
+  /* ---- phase banner ---- */
+  const banner = document.getElementById('calPhaseBanner');
+  if (banner) {
+    if (!stats.last) {
+      banner.innerHTML = `
+        <div class="flex items-center gap-2.5 rounded-2xl border border-blush-200 bg-gradient-to-br from-blush-50 to-lilac-50 px-3.5 py-3">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/80">
+            <i data-lucide="sparkles" class="h-4 w-4 text-blush-600"></i>
+          </span>
+          <p class="text-[11.5px] leading-relaxed text-ink/70">
+            Log your first period to unlock phase tracking and predictions.
+          </p>
+        </div>`;
+    } else {
+      const day = Math.max(1, diffDays(stats.last.startDate, today) + 1);
+      const len = Math.max(1, stats.avgCycle);
+      const cycleDay = Math.min(day, len);
+      const pct = Math.min(100, Math.round((cycleDay / len) * 100));
+
+      let phaseName = 'Follicular', grad = 'from-lilac-400 to-lilac-500';
+      if (stats.ongoing) { phaseName = 'Menstrual'; grad = 'from-blush-500 to-blush-600'; }
+      else if (day > len - 16 && day <= len - 11) { phaseName = 'Ovulation'; grad = 'from-emerald-400 to-emerald-500'; }
+      else if (day > len - 11) { phaseName = 'Luteal'; grad = 'from-amber-400 to-amber-500'; }
+
+      banner.innerHTML = `
+        <div class="rounded-2xl border border-white bg-white/90 px-3.5 py-3 shadow-[0_10px_26px_-22px_rgba(201,63,112,0.8)]">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-gradient-to-br ${grad}"></span>
+              <span class="text-[11.5px] font-semibold text-ink/75">${phaseName} phase</span>
+            </div>
+            <span class="rounded-full bg-blush-50 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-blush-700">
+              Day ${cycleDay} of ${len}
+            </span>
+          </div>
+          <div class="h-1.5 w-full overflow-hidden rounded-full bg-blush-100">
+            <div class="h-full rounded-full bg-gradient-to-r ${grad} transition-all duration-700" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }
+  }
+
+  /* ---- month grid ---- */
+  const firstOfMonth = new Date(ui.calYear, ui.calMonth, 1);
+  const startWeekday = firstOfMonth.getDay();
+  const daysInMonth = new Date(ui.calYear, ui.calMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(ui.calYear, ui.calMonth, 0).getDate();
+
+  const cells = [];
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    cells.push({ muted: true, day: daysInPrevMonth - i });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, iso: `${ui.calYear}-${pad2(ui.calMonth + 1)}-${pad2(d)}` });
+  }
+  while (cells.length % 7 !== 0) cells.push({ empty: true });
+
+  const grid = document.getElementById('calGrid');
+  grid.classList.remove('cal-grid-anim');
+  void grid.offsetWidth;
+  grid.classList.add('cal-grid-anim');
+
+  grid.innerHTML = cells.map(c => {
+    if (c.empty) return '<div></div>';
+    if (c.muted) {
+      return `<div class="flex h-[46px] items-center justify-center text-[12px] font-medium text-ink/25">${c.day}</div>`;
+    }
+
+    const isActual = actual.has(c.iso);
+    const isPredicted = predicted.has(c.iso);
+    const isToday = c.iso === today;
+    const isSelected = c.iso === ui.selectedDate;
+
+    let cls = 'cal-cell';
+    if (isActual) cls += ' is-actual';
+    else if (isPredicted) cls += ' is-predicted';
+    if (isToday) cls += ' is-today';
+    if (isSelected) cls += ' is-selected';
+
+    const dot = (isPredicted && !isActual)
+      ? '<span class="cal-dot"></span>'
+      : '';
+
+    return `<button type="button" data-date="${c.iso}" class="${cls}" aria-label="${fmtLong(c.iso)}">${c.day}${dot}</button>`;
+  }).join('');
+
+  grid.querySelectorAll('[data-date]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ui.selectedDate = btn.dataset.date;
+      renderCalendar();
+      refreshIcons();
+      openDaySheet(btn.dataset.date);
+    });
+  });
+
+  /* ---- legend ---- */
+  const legend = document.getElementById('calLegend');
+  if (legend) {
+    legend.innerHTML = `
+      <span class="flex items-center gap-2">
+        <span class="h-3.5 w-3.5 rounded-md bg-gradient-to-br from-blush-600 to-blush-700"></span> Recorded
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="h-3.5 w-3.5 rounded-md bg-blush-100 ring-1 ring-blush-300"></span> Predicted
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="h-3.5 w-3.5 rounded-md bg-white" style="box-shadow: inset 0 0 0 2px #9070d6;"></span> Today
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="h-3.5 w-3.5 rounded-md bg-white ring-2 ring-lilac-500"></span> Selected
+      </span>`;
+  }
+
+  refreshIcons();
+}
+
+function openDaySheet(iso) {
+  const stats = getStats();
+  const { actual, predicted } = buildDayMap(stats);
+  const today = todayISO();
+
+  const record = stats.periods.find(p => {
+    const end = p.endDate || today;
+    return iso >= p.startDate && iso <= end;
+  });
+
+  let badge = '';
+  let body = '';
+
+  if (record) {
+    const isOngoing = !record.endDate;
+    const dur = record.endDate ? diffDays(record.startDate, record.endDate) + 1 : diffDays(record.startDate, today) + 1;
+    badge = `<span class="rounded-full bg-blush-600 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">Recorded</span>`;
+    body = `
+      <div class="mt-4 space-y-2.5 rounded-2xl bg-blush-50 p-4">
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-[12px] text-ink/60">Period started</span>
+          <span class="text-[12.5px] font-semibold text-ink">${fmtLong(record.startDate)}</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-[12px] text-ink/60">Start time</span>
+          <span class="text-[12.5px] font-semibold text-ink">${fmtTime(record.startTime)}</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-[12px] text-ink/60">Ended</span>
+          <span class="text-[12.5px] font-semibold text-ink">${record.endDate ? fmtLong(record.endDate) : 'Currently ongoing'}</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-[12px] text-ink/60">Duration</span>
+          <span class="text-[12.5px] font-semibold text-ink">${plural(dur, 'day')}${isOngoing ? ' so far' : ''}</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-[12px] text-ink/60">Flow</span>
+          <span class="text-[12.5px] font-semibold capitalize text-ink">${record.flow}</span>
+        </div>
+      </div>`;
+  } else if (predicted.has(iso)) {
+    badge = `<span class="rounded-full bg-blush-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blush-700">Predicted</span>`;
+    body = `
+      <div class="mt-4 rounded-2xl bg-blush-50 p-4">
+        <p class="text-[12.5px] leading-relaxed text-ink/70">
+          This day is a <strong class="text-blush-700">predicted</strong> period day based on your average cycle of
+          ${plural(stats.avgCycle, 'day')} and an average duration of ${plural(stats.avgDuration, 'day')}.
+        </p>
+        <p class="mt-2 text-[11.5px] leading-relaxed text-ink/60">
+          Predictions are estimates, not confirmed records. Nothing is saved automatically.
+        </p>
+      </div>`;
+  } else {
+    badge = `<span class="rounded-full bg-lilac-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-lilac-600">No record</span>`;
+    body = `
+      <div class="mt-4 rounded-2xl bg-lilac-50 p-4">
+        <p class="text-[12.5px] leading-relaxed text-ink/70">
+          There's no recorded or predicted period on this day.
+        </p>
+      </div>`;
+  }
+
+  openSheet(`
+    ${sheetHeader(fmtLong(iso))}
+    <div class="flex items-center gap-2">
+      ${badge}
+      <span class="text-[11.5px] text-ink/60">${WEEKDAYS[isoToDate(iso).getDay()]}</span>
+    </div>
+    ${body}
+    <button type="button" data-close class="btn-ghost mt-5 w-full">Close</button>
+  `);
+}
+
+document.getElementById('calPrev').addEventListener('click', () => {
+  ui.calMonth--;
+  if (ui.calMonth < 0) { ui.calMonth = 11; ui.calYear--; }
+  renderCalendar();
+  refreshIcons();
+});
+document.getElementById('calNext').addEventListener('click', () => {
+  ui.calMonth++;
+  if (ui.calMonth > 11) { ui.calMonth = 0; ui.calYear++; }
+  renderCalendar();
+  refreshIcons();
+});
+const calTodayBtn = document.getElementById('calTodayBtn');
+if (calTodayBtn) {
+  calTodayBtn.addEventListener('click', () => {
+    const now = new Date();
+    ui.calYear = now.getFullYear();
+    ui.calMonth = now.getMonth();
+    ui.selectedDate = todayISO();
+    renderCalendar();
+    refreshIcons();
+  });
+}
+
+/* ============================================================================
+   11. ADD PERIOD SCREEN
+   ========================================================================== */
+const addStartDateEl = document.getElementById('addStartDate');
+const addStartTimeEl = document.getElementById('addStartTime');
+const addNotesCountEl = document.getElementById('addNotesCount');
+
+/* -------- notes character counter -------- */
+function updateNotesCounter() {
+  if (!addNotesCountEl) return;
+  const len = (document.getElementById('addNotes')?.value || '').length;
+  addNotesCountEl.textContent = `${len}/240`;
+  addNotesCountEl.style.color = len >= 240 ? '#c93f70' : '';
+}
+/* addStartTimeEl already declared above */
+const addNotesEl = document.getElementById('addNotes');
+const addErrorEl = document.getElementById('addError');
+
+function setAddDefaults() {
+  addStartDateEl.max = todayISO();
+  if (!addStartDateEl.value) addStartDateEl.value = todayISO();
+  if (!addStartTimeEl.value) addStartTimeEl.value = nowTime();
+}
+
+function showAddError(msg) {
+  addErrorEl.textContent = msg;
+  addErrorEl.classList.remove('hidden');
+}
+function clearAddError() {
+  addErrorEl.classList.add('hidden');
+  addErrorEl.textContent = '';
+}
+
+function updateAddExpectedEnd() {
+  const sd = addStartDateEl.value;
+  const stats = getStats();
+  const out = document.getElementById('addExpectedEnd');
+  const hint = document.getElementById('addExpectedHint');
+  const badge = document.getElementById('addDurationBadge');
+
+  if (badge) badge.textContent = `${stats.avgDuration}d`;
+
+  if (!isISO(sd)) {
+    out.textContent = '—';
+    hint.textContent = 'Choose a start date to see your expected end date.';
+    return;
+  }
+
+  const end = expectedEnd(sd, stats.avgDuration);
+  out.textContent = fmtLong(end);
+  hint.textContent = `Based on your average period duration of ${plural(stats.avgDuration, 'day')}` +
+    (stats.hasDurationData ? '.' : ' (initial estimate).');
+}
+
+function renderFlowPicker() {
+  const wrap = document.getElementById('flowPicker');
+  wrap.innerHTML = FLOWS.map(f => {
+    const active = addFlow === f.key;
+    return `
+      <button type="button" data-flow="${f.key}"
+        class="flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 transition-all duration-200 active:scale-95
+        ${active
+          ? 'border-blush-400 bg-blush-50 text-blush-700 shadow-[0_6px_16px_-10px_rgba(201,63,112,0.9)]'
+          : 'border-blush-200 bg-white text-ink/60'}">
+        <i data-lucide="${f.icon}" class="h-4 w-4"></i>
+        <span class="text-[11px] font-semibold">${f.label}</span>
+      </button>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-flow]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      addFlow = btn.dataset.flow;
+      renderFlowPicker();
+      refreshIcons();
+    });
+  });
+  refreshIcons();
+}
+
+function renderAddEndSection() {
+  const stats = getStats();
+  const el = document.getElementById('addEndSection');
+
+  if (stats.ongoing) {
+    const p = stats.ongoing;
+    const expEnd = expectedEnd(p.startDate, stats.avgDuration);
+    const dayNum = Math.max(1, diffDays(p.startDate, todayISO()) + 1);
+
+    el.innerHTML = `
+      <h2 class="mb-3 flex items-center gap-2 font-display text-[16px] text-ink">
+        <i data-lucide="check-circle-2" class="h-4 w-4 text-lilac-600"></i> Actual Period End
+      </h2>
+      <div class="rounded-2xl bg-lilac-50 px-4 py-3">
+        <p class="text-[12.5px] leading-relaxed text-ink/70">
+          Your period started <strong class="text-ink">${fmtLong(p.startDate)}</strong> and is on
+          <strong class="text-ink">day ${dayNum}</strong>.
+        </p>
+        <p class="mt-1 text-[11.5px] text-ink/60">Expected to end around ${fmtLong(expEnd)}.</p>
+      </div>
+      <button type="button" id="markEndedBtn" class="btn-ghost mt-3 w-full !border-lilac-200 !text-lilac-600">
+        Mark Period as Ended
+      </button>`;
+
+    document.getElementById('markEndedBtn').addEventListener('click', () => {
+      openEndSheet(p.id);
+    });
+  } else {
+    el.innerHTML = `
+      <h2 class="mb-2 flex items-center gap-2 font-display text-[16px] text-ink">
+        <i data-lucide="check-circle-2" class="h-4 w-4 text-ink/40"></i> Actual Period End
+      </h2>
+      <p class="text-[11.5px] leading-relaxed text-ink/60">
+        No ongoing period right now. When you save a new period it stays <em>ongoing</em> until you
+        mark it as ended — you can do that here, or from the Home screen.
+      </p>`;
+  }
+  refreshIcons();
+}
+
+addStartDateEl.addEventListener('change', updateAddExpectedEnd);
+addStartDateEl.addEventListener('input',  updateAddExpectedEnd);
+addStartTimeEl.addEventListener('change', clearAddError);
+addNotesEl.addEventListener('input', updateNotesCounter);
+
+document.getElementById('addCancel').addEventListener('click', () => {
+  resetAddForm();
+  switchTab('home');
+});
+
+function resetAddForm() {
+  addStartDateEl.value = todayISO();
+  addStartTimeEl.value = nowTime();
+  addNotesEl.value = '';
+  addFlow = 'medium';
+  clearAddError();
+  renderFlowPicker();
+  updateAddExpectedEnd();
+  updateNotesCounter();
+}
+
+document.getElementById('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  clearAddError();
+
+  const startDate = addStartDateEl.value;
+  const startTime = addStartTimeEl.value || '09:00';
+
+  const err = validateNew(startDate);
+  if (err) { showAddError(err); return; }
+
+  const record = normalizePeriod({
+    id: genId(),
+    startDate,
+    startTime,
+    endDate: null,
+    endTime: null,
+    flow: addFlow,
+    notes: addNotesEl.value.trim(),
+    createdAt: Date.now()
+  });
+
+  state.periods.push(record);
+  sortPeriods();
+  saveState();
+
+  toast('Period saved. Take care of yourself 💗');
+  resetAddForm();
+  renderAll();
+  switchTab('home');
+});
+
+/* ============================================================================
+   12. MARK PERIOD AS ENDED
+   ========================================================================== */
+function openEndSheet(periodId) {
+  const p = state.periods.find(x => x.id === periodId);
+  if (!p) return;
+
+  const today = todayISO();
+  const stats = getStats();
+  const suggestedEnd = expectedEnd(p.startDate, stats.avgDuration);
+
+  openSheet(`
+    ${sheetHeader('Mark Period as Ended')}
+    <p class="mb-4 text-[12.5px] leading-relaxed text-ink/70">
+      Started <strong class="text-ink">${fmtLong(p.startDate)}</strong> at ${fmtTime(p.startTime)}.
+      Confirm when your period actually ended.
+    </p>
+
+    <div class="space-y-3.5">
+      <div>
+        <label class="field-label" for="endDateInput">Actual end date</label>
+        <input id="endDateInput" type="date" class="input" min="${p.startDate}" max="${today}"
+               value="${suggestedEnd > today ? today : suggestedEnd}" />
+      </div>
+      <div>
+        <label class="field-label" for="endTimeInput">Actual end time</label>
+        <input id="endTimeInput" type="time" class="input" value="${nowTime()}" />
+      </div>
+    </div>
+
+    <p id="endSheetError" class="mt-3 hidden rounded-2xl bg-rose-50 px-4 py-2.5 text-[12px] font-medium text-rose-700"></p>
+
+    <div class="mt-5 flex gap-3">
+      <button type="button" data-close class="btn-ghost flex-1">Cancel</button>
+      <button type="button" id="endConfirmBtn" class="btn-primary flex-1">Confirm</button>
+    </div>
+  `, panel => {
+    const dateEl = panel.querySelector('#endDateInput');
+    const timeEl = panel.querySelector('#endTimeInput');
+    const errEl = panel.querySelector('#endSheetError');
+
+    panel.querySelector('#endConfirmBtn').addEventListener('click', () => {
+      const endDate = dateEl.value;
+      const endTime = timeEl.value || '09:00';
+      errEl.classList.add('hidden');
+
+      if (!isISO(endDate)) {
+        errEl.textContent = 'Please choose a valid end date.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (endDate < p.startDate) {
+        errEl.textContent = 'The end date cannot be before the start date.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (endDate > todayISO()) {
+        errEl.textContent = 'The end date cannot be in the future.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      p.endDate = endDate;
+      p.endTime = endTime;
+      p.autoEnded = false;
+      saveState();
+      closeSheetAndReturn();
+      renderAll();
+      toast('Period marked as ended.');
+    });
+  });
+}
+
+/* ============================================================================
+   13. QUICK ACTIONS
+   ========================================================================== */
+document.getElementById('qaStart').addEventListener('click', () => {
+  const today = todayISO();
+  const err = validateNew(today);
+  if (err) { toast(err, 'error'); return; }
+
+  const record = normalizePeriod({
+    id: genId(),
+    startDate: today,
+    startTime: nowTime(),
+    endDate: null,
+    endTime: null,
+    flow: 'medium',
+    notes: '',
+    createdAt: Date.now()
+  });
+
+  state.periods.push(record);
+  sortPeriods();
+  saveState();
+  renderAll();
+  toast('Period started — logged for today.');
+});
+
+document.getElementById('qaEnd').addEventListener('click', () => {
+  const stats = getStats();
+  if (!stats.ongoing) { toast('You have no ongoing period to end.', 'error'); return; }
+  openEndSheet(stats.ongoing.id);
+});
+
+/* ============================================================================
+   14. HISTORY RENDER
+   ========================================================================== */
+
+/**
+ * Build a single timeline card (rail + node + card body).
+ * Used by BOTH the History tab preview and the "View all" modal.
+ *
+ * @param {object} p        period record
+ * @param {object} opts
+ *   - cycleMap            map of periodId -> cycle length
+ *   - stats               getStats() result
+ *   - today               today's ISO date
+ *   - flatIndex           running index (for animation stagger)
+ *   - interactive         (default true) whether to bind action handlers later
+ *                         (handlers are wired by the caller; this just emits markup)
+ */
+function buildTimelineCard(p, opts) {
+  const { cycleMap, stats, today, flatIndex } = opts;
+
+  const ongoing = !p.endDate;
+  const dur = p.endDate
+    ? diffDays(p.startDate, p.endDate) + 1
+    : diffDays(p.startDate, today) + 1;
+  const cycle = cycleMap[p.id];
+  const rel = relativeDays(p.startDate);
+  const wd = shortWeekday(p.startDate);
+
+  // Cycle deviation vs. average
+  let cycleDeltaHTML = '';
+  if (cycle && stats.hasCycleData && cycle !== stats.avgCycle) {
+    const diff = cycle - stats.avgCycle;
+    const longer = diff > 0;
+    const absDiff = Math.abs(diff);
+    cycleDeltaHTML = `
+      <span class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold
+        ${longer ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}">
+        <i data-lucide="${longer ? 'arrow-up' : 'arrow-down'}" class="h-2.5 w-2.5"></i>${absDiff}d ${longer ? 'long' : 'short'}
+      </span>`;
+  }
+
+  const statusClass = ongoing
+    ? 'bg-lilac-100 text-lilac-600'
+    : p.autoEnded
+      ? 'bg-amber-50 text-amber-700'
+      : 'bg-blush-100 text-blush-700';
+  const statusLabel = ongoing
+    ? 'Ongoing'
+    : p.autoEnded
+      ? 'Estimated'
+      : (p.flow.charAt(0).toUpperCase() + p.flow.slice(1));
+
+  const nodeClass = ongoing ? 'tl-node is-ongoing' : 'tl-node';
+  const noteId = `note-${p.id}`;
+  const delay = Math.min(flatIndex, 10) * 30;
+
+  return `
+    <div class="relative tl-rail pop-in" style="animation-delay:${delay}ms">
+      <span class="${nodeClass}"><span class="tl-node-dot"></span></span>
+
+      <div class="mb-3 overflow-hidden rounded-[20px] border border-white bg-white/95 shadow-[0_10px_30px_-24px_rgba(201,63,112,0.9)]">
+        <div class="px-3.5 py-3">
+
+          <!-- header row: date + status -->
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-baseline gap-1.5">
+                <p class="font-display text-[17px] leading-tight text-ink">${fmtMedium(p.startDate)}</p>
+                <span class="text-[10.5px] font-medium text-ink/45">${wd}</span>
+              </div>
+              <p class="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink/50">
+                <i data-lucide="clock" class="h-2.5 w-2.5"></i>
+                ${fmtTime(p.startTime)}
+                <span class="mx-0.5 text-ink/25">·</span>
+                <span>${rel}</span>
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider ${statusClass}">
+              ${statusLabel}
+            </span>
+          </div>
+
+          <!-- metric pills -->
+          <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <span class="inline-flex items-center gap-1 rounded-full bg-blush-50 px-2 py-1 text-[10px] font-semibold text-blush-700">
+              <i data-lucide="droplet" class="h-2.5 w-2.5"></i>${dur}d${ongoing ? '+' : ''}
+            </span>
+            <span class="inline-flex items-center gap-1 rounded-full bg-lilac-50 px-2 py-1 text-[10px] font-semibold text-lilac-600">
+              <i data-lucide="repeat-2" class="h-2.5 w-2.5"></i>${cycle ? cycle + 'd' : 'first'}
+            </span>
+            ${cycleDeltaHTML}
+            ${p.endDate ? `
+              <span class="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-medium text-ink/60 ring-1 ring-blush-100">
+                <i data-lucide="flag" class="h-2.5 w-2.5"></i>ended ${fmtMedium(p.endDate)}
+              </span>` : `
+              <span class="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-medium text-ink/60 ring-1 ring-lilac-100">
+                <i data-lucide="hourglass" class="h-2.5 w-2.5"></i>in progress
+              </span>`}
+          </div>
+
+          <!-- notes (expandable) -->
+          ${p.notes ? `
+            <div class="mt-2">
+              <p id="${noteId}" class="tl-notes-clamp rounded-lg bg-blush-50/60 px-2.5 py-1.5 text-[11px] leading-snug text-ink/65">
+                ${escapeHtml(p.notes)}
+              </p>
+              ${p.notes.length > 80 ? `
+                <button type="button" data-toggle-note="${noteId}"
+                  class="mt-1 text-[10px] font-semibold text-blush-700 transition active:scale-95">
+                  Show more
+                </button>` : ''}
+            </div>` : ''}
+
+          <!-- action row -->
+          <div class="mt-3 flex items-center gap-1.5">
+            ${ongoing ? `
+              <button type="button" data-end="${p.id}"
+                class="flex flex-1 items-center justify-center gap-1 rounded-xl bg-lilac-50 py-2 text-[11px] font-semibold text-lilac-600 transition active:scale-[.97]">
+                <i data-lucide="check-circle-2" class="h-3 w-3"></i> End
+              </button>` : ''}
+            <button type="button" data-view="${p.id}"
+              class="flex flex-1 items-center justify-center gap-1 rounded-xl bg-blush-50 py-2 text-[11px] font-semibold text-blush-700 transition active:scale-[.97]">
+              <i data-lucide="eye" class="h-3 w-3"></i> View
+            </button>
+            <button type="button" data-edit="${p.id}"
+              class="flex flex-1 items-center justify-center gap-1 rounded-xl bg-white py-2 text-[11px] font-semibold text-ink/70 ring-1 ring-blush-200 transition active:scale-[.97]">
+              <i data-lucide="pencil" class="h-3 w-3"></i> Edit
+            </button>
+            <button type="button" data-del="${p.id}"
+              class="flex items-center justify-center rounded-xl bg-white px-2.5 py-2 text-rose-600 ring-1 ring-rose-200 transition active:scale-[.97]">
+              <i data-lucide="trash-2" class="h-3 w-3"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/**
+ * Wire all interactive handlers inside a timeline container
+ * (works for both the History tab list and the "View all" sheet).
+ * Idempotent: safely re-binds to fresh DOM nodes.
+ */
+function wireTimelineHandlers(container) {
+  if (!container) return;
+
+  // If we're inside the "All Periods" modal, arrange for it to re-open
+  // after a child sheet closes (view / edit / end / delete).
+  // The All Periods sheet passes `#modalPanel` as container, and its body
+  // contains the `.tl-sheet-list` wrapper — check descendants, not ancestors.
+  const inAllPeriodsSheet =
+    container.id === 'modalPanel' &&
+    !!container.querySelector('.tl-sheet-list');
+
+  function rememberReturnScroll() {
+    if (!inAllPeriodsSheet) return;
+    const scroller = document.getElementById('modalPanel');
+    const scrollTop = scroller ? scroller.scrollTop : 0;
+    // Re-open the All Periods list and restore scroll offset
+    modalReturn = () => openAllPeriodsSheet(scrollTop);
+  }
+
+  container.querySelectorAll('[data-view]').forEach(b =>
+    b.addEventListener('click', () => {
+      rememberReturnScroll();
+      openDetailsSheet(b.dataset.view);
+    }));
+
+  container.querySelectorAll('[data-edit]').forEach(b =>
+    b.addEventListener('click', () => {
+      rememberReturnScroll();
+      openEditSheet(b.dataset.edit);
+    }));
+
+  container.querySelectorAll('[data-del]').forEach(b =>
+    b.addEventListener('click', () => {
+      rememberReturnScroll();
+      openDeleteSheet(b.dataset.del);
+    }));
+
+  container.querySelectorAll('[data-end]').forEach(b =>
+    b.addEventListener('click', () => {
+      rememberReturnScroll();
+      openEndSheet(b.dataset.end);
+    }));
+
+  container.querySelectorAll('[data-toggle-note]').forEach(b => {
+    b.addEventListener('click', () => {
+      // Scope lookup to this container so preview + modal copies don't collide
+      const el = container.querySelector('#' + CSS.escape(b.dataset.toggleNote));
+      if (!el) return;
+      const open = el.classList.toggle('is-open');
+      b.textContent = open ? 'Show less' : 'Show more';
+    });
+  });
+
+  refreshIcons();
+}
+
+/**
+ * Open the "View all periods" bottom-sheet modal.
+ * Reuses the same openSheet() slide-up animation as the rest of the app.
+ */
+function openAllPeriodsSheet(preserveScroll) {
+  const stats = getStats();
+  const cycleMap = buildCycleMap();
+  const today = todayISO();
+
+  const allDesc = [...stats.periods].reverse();
+  const filtered = allDesc.filter(p => {
+    if (ui.histFilter === 'ongoing')   return !p.endDate;
+    if (ui.histFilter === 'completed') return !!p.endDate;
+    return true;
+  });
+
+  if (!filtered.length) {
+    // Defensive — shouldn't be reachable since the button is only shown when >3
+    toast('No records to show.', 'error');
+    return;
+  }
+
+  // Group by month (same logic as the History tab)
+  const groups = {};
+  filtered.forEach(p => {
+    const key = p.startDate.slice(0, 7);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(p);
+  });
+  const groupKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  let flatIndex = 0;
+  const timelineHTML = groupKeys.map(groupKey => {
+    const items = groups[groupKey];
+    const [gy, gm] = groupKey.split('-').map(Number);
+    const monthLabel = `${MONTHS[gm - 1]} ${gy}`;
+    const monthHeader = `
+      <div class="tl-month">
+        <span class="text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink/55">${monthLabel}</span>
+        <span class="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-semibold text-ink/50 ring-1 ring-blush-100">${items.length}</span>
+        <span class="tl-month-line"></span>
+      </div>`;
+    const rowsHTML = items.map(p => {
+      const html = buildTimelineCard(p, { cycleMap, stats, today, flatIndex });
+      flatIndex++;
+      return html;
+    }).join('');
+    return monthHeader + rowsHTML;
+  }).join('');
+
+  openSheet(`
+    ${sheetHeader('All Periods')}
+    <p class="-mt-3 mb-4 text-[11.5px] leading-relaxed text-ink/55">
+      ${plural(filtered.length, 'record')} · ${ui.histFilter === 'all' ? 'all time' : ui.histFilter}
+    </p>
+
+    <div class="tl-sheet-list">
+      ${timelineHTML}
+    </div>
+
+    <button type="button" data-close class="btn-ghost mt-2 w-full">Close</button>
+  `, panel => {
+    wireTimelineHandlers(panel);
+
+    // Restore scroll position if we're coming back from a child sheet
+    if (preserveScroll) {
+      requestAnimationFrame(() => {
+        const scroller = document.getElementById('modalPanel');
+        if (scroller) scroller.scrollTop = preserveScroll;
+      });
+    }
+  });
+}
+
+/* ============================================================================
+   14. HISTORY RENDER
+   ========================================================================== */
+function renderHistory() {
+  const stats = getStats();
+  const cycleMap = buildCycleMap();
+  const today = todayISO();
+
+  /* ---- highlighted summary card ---- */
+  const highlight = document.getElementById('historyHighlight');
+  if (highlight) {
+    if (stats.total === 0) {
+      highlight.innerHTML = `
+        <div class="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-blush-600 via-blush-500 to-lilac-500 p-5 text-white shadow-[0_18px_45px_-20px_rgba(201,63,112,0.9)]">
+          <div class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10"></div>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90">No data yet</p>
+          <p class="mt-1.5 font-display text-[19px] leading-snug">Your story starts here</p>
+          <p class="mt-1 text-[12px] text-white/90">Log a period to unlock cycle insights.</p>
+        </div>`;
+    } else {
+      const pct = Math.min(100, Math.round((stats.avgDuration / Math.max(1, stats.avgCycle)) * 100));
+      highlight.innerHTML = `
+        <div class="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-blush-600 via-blush-500 to-lilac-500 p-5 text-white shadow-[0_18px_45px_-20px_rgba(201,63,112,0.9)]">
+          <div class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10"></div>
+          <div class="pointer-events-none absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-white/5"></div>
+          <div class="relative flex items-center gap-4">
+            <div class="relative h-[74px] w-[74px] shrink-0">
+              <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="8"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"
+                        stroke-dasharray="251.2" stroke-dashoffset="${(251.2 * (1 - pct / 100)).toFixed(1)}"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-display text-[19px] font-semibold leading-none">${stats.avgCycle}</span>
+                <span class="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-white/90">days</span>
+              </div>
+            </div>
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90">Average Cycle</p>
+              <p class="mt-1 font-display text-[17px] leading-tight">${stats.hasCycleData ? 'Your pattern is forming' : 'Still learning'}</p>
+              <p class="mt-1 text-[11.5px] text-white/90">${plural(stats.total, 'period')} logged · ${stats.hasDurationData ? plural(stats.avgDuration, 'day') + ' bleed' : 'no duration yet'}</p>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
+  /* ---- stat grid (2-col, compact) ---- */
+  const statCards = [
+    { label: 'Total Periods', value: String(stats.total), icon: 'layers', tone: 'blush' },
+    { label: 'Avg Duration',  value: stats.hasDurationData ? `${stats.avgDuration}d` : '—', icon: 'clock-3', tone: 'lilac' },
+    { label: 'Shortest', value: stats.shortest !== null ? `${stats.shortest}d` : '—', icon: 'arrow-down', tone: 'blush' },
+    { label: 'Longest',  value: stats.longest  !== null ? `${stats.longest}d`  : '—', icon: 'arrow-up',   tone: 'lilac' }
+  ];
+
+  document.getElementById('historyStats').innerHTML = statCards.map((s, i) => `
+    <div class="pop-in flex items-center gap-2.5 rounded-[18px] border border-white bg-white/90 px-3 py-2.5 shadow-[0_8px_22px_-18px_rgba(201,63,112,0.8)]"
+         style="animation-delay:${i * 40}ms">
+      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${s.tone === 'blush' ? 'bg-blush-50 text-blush-600' : 'bg-lilac-50 text-lilac-600'}">
+        <i data-lucide="${s.icon}" class="h-3.5 w-3.5"></i>
+      </span>
+      <div class="min-w-0">
+        <p class="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-ink/55">${s.label}</p>
+        <p class="mt-0.5 font-display text-[15px] leading-tight text-ink">${s.value}</p>
+      </div>
+    </div>`).join('');
+
+  // Render this block's icons immediately — don't wait for the function tail,
+  // because the empty / filtered early-returns below skip the final refreshIcons().
+  refreshIcons();
+
+  /* ---- filter + count ---- */
+  const allDesc = [...stats.periods].reverse();
+  const filtered = allDesc.filter(p => {
+    if (ui.histFilter === 'ongoing')   return !p.endDate;
+    if (ui.histFilter === 'completed') return !!p.endDate;
+    return true;
+  });
+
+  const countEl = document.getElementById('historyCount');
+  if (countEl) countEl.textContent = String(filtered.length);
+
+  /* ---- timeline list ---- */
+  const list = document.getElementById('historyList');
+
+  /* ===== empty: no records at all ===== */
+  if (!allDesc.length) {
+    list.innerHTML = `
+      <div class="rounded-[24px] border border-blush-200 bg-white/80 p-8 text-center">
+        <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blush-50">
+          <i data-lucide="book-heart" class="h-6 w-6 text-blush-600"></i>
+        </div>
+        <p class="font-display text-[15px] text-ink">No periods recorded yet</p>
+        <p class="mx-auto mt-1 max-w-[230px] text-[11.5px] leading-relaxed text-ink/60">
+          Your recorded periods will appear here with full details.
+        </p>
+        <button id="emptyAddBtn" class="btn-soft mt-4">Record your first period</button>
+      </div>`;
+    const b = document.getElementById('emptyAddBtn');
+    if (b) b.addEventListener('click', () => switchTab('add'));
+    refreshIcons();
+    return;
+  }
+
+  /* ===== empty: filtered out ===== */
+  if (!filtered.length) {
+    const label = ui.histFilter === 'ongoing' ? 'ongoing' : 'completed';
+    list.innerHTML = `
+      <div class="rounded-[24px] border border-lilac-200 bg-white/80 p-6 text-center">
+        <div class="mx-auto mb-2.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-lilac-50">
+          <i data-lucide="filter-x" class="h-5 w-5 text-lilac-600"></i>
+        </div>
+        <p class="font-display text-[14px] text-ink">No ${label} periods</p>
+        <p class="mt-1 text-[11.5px] leading-relaxed text-ink/60">
+          Try a different filter to see your records.
+        </p>
+        <button type="button" id="resetFilterBtn" class="btn-soft mt-3">Show all periods</button>
+      </div>`;
+    const rb = document.getElementById('resetFilterBtn');
+    if (rb) rb.addEventListener('click', () => {
+      ui.histFilter = 'all';
+      document.querySelectorAll('[data-hist-filter]').forEach(b => {
+        b.classList.toggle('hist-chip-active', b.dataset.histFilter === 'all');
+      });
+      renderHistory();
+      refreshIcons();
+    });
+    refreshIcons();
+    return;
+  }
+
+  /* ===== build grouped timeline (PREVIEW: first 3 only) ===== */
+  const PREVIEW_LIMIT = 3;
+  const previewItems = filtered.slice(0, PREVIEW_LIMIT);
+  const hasMore = filtered.length > PREVIEW_LIMIT;
+
+  // Group the preview items by YYYY-MM
+  const groups = {};
+  previewItems.forEach(p => {
+    const key = p.startDate.slice(0, 7); // YYYY-MM
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(p);
+  });
+  const groupKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a)); // newest month first
+
+  let flatIndex = 0;
+
+  const timelineHTML = groupKeys.map(groupKey => {
+    const items = groups[groupKey];
+    const [gy, gm] = groupKey.split('-').map(Number);
+    const monthLabel = `${MONTHS[gm - 1]} ${gy}`;
+    const monthCount = items.length;
+
+    const monthHeader = `
+      <div class="tl-month">
+        <span class="text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink/55">${monthLabel}</span>
+        <span class="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-semibold text-ink/50 ring-1 ring-blush-100">${monthCount}</span>
+        <span class="tl-month-line"></span>
+      </div>`;
+
+    const rowsHTML = items.map(p => {
+      const html = buildTimelineCard(p, { cycleMap, stats, today, flatIndex });
+      flatIndex++;
+      return html;
+    }).join('');
+
+    return monthHeader + rowsHTML;
+  }).join('');
+
+  /* ---- "View all" button under the last preview record ---- */
+  const viewAllHTML = hasMore
+    ? `
+      <button type="button" id="viewAllPeriodsBtn" class="tl-viewall">
+        <i data-lucide="list" class="h-3.5 w-3.5"></i>
+        View all ${filtered.length} periods
+        <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+      </button>`
+    : '';
+
+  list.innerHTML = timelineHTML + viewAllHTML;
+
+  /* ---- wire timeline actions (preview cards) ---- */
+  wireTimelineHandlers(list);
+
+  /* ---- wire "View all" button ---- */
+  const viewAllBtn = document.getElementById('viewAllPeriodsBtn');
+  if (viewAllBtn) {
+    viewAllBtn.addEventListener('click', () => {
+      clearModalReturn();   // fresh entry → no pending return
+      openAllPeriodsSheet();
+    });
+  }
+
+  refreshIcons();
+}
+
+/* ============================================================================
+   15. HISTORY SHEETS
+   ========================================================================== */
+function openDetailsSheet(id) {
+  const p = state.periods.find(x => x.id === id);
+  if (!p) return;
+
+  const today = todayISO();
+  const ongoing = !p.endDate;
+  const dur = p.endDate ? diffDays(p.startDate, p.endDate) + 1 : diffDays(p.startDate, today) + 1;
+  const cycle = buildCycleMap()[p.id];
+  const stats = getStats();
+  const expEnd = expectedEnd(p.startDate, stats.avgDuration);
+
+  const rows = [
+    ['Start date', fmtLong(p.startDate)],
+    ['Start time', fmtTime(p.startTime)],
+    ['End date', p.endDate ? fmtLong(p.endDate) : 'Currently ongoing'],
+    ['End time', p.endDate ? fmtTime(p.endTime) : '—'],
+    ['Duration', `${plural(dur, 'day')}${ongoing ? ' so far' : ''}`],
+    ['Cycle length', cycle ? plural(cycle, 'day') : 'First recorded period'],
+    ['Flow level', p.flow.charAt(0).toUpperCase() + p.flow.slice(1)],
+    ['Expected end', ongoing ? `${fmtLong(expEnd)} (estimate)` : '—']
+  ];
+
+  openSheet(`
+    ${sheetHeader('Period Details')}
+    <div class="space-y-2.5">
+      ${rows.map(([k, v]) => `
+        <div class="flex items-baseline justify-between gap-4 border-b border-blush-100 pb-2">
+          <span class="text-[12px] text-ink/60">${k}</span>
+          <span class="text-right text-[12.5px] font-semibold text-ink">${v}</span>
+        </div>`).join('')}
+    </div>
+
+    ${p.notes ? `
+      <div class="mt-4 rounded-2xl bg-blush-50 p-4">
+        <p class="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-blush-700">Notes</p>
+        <p class="whitespace-pre-wrap text-[12.5px] leading-relaxed text-ink/70">${escapeHtml(p.notes)}</p>
+      </div>` : ''}
+
+    ${p.autoEnded ? `
+      <p class="mt-3 rounded-xl bg-lilac-50 px-3 py-2 text-[11px] leading-relaxed text-lilac-600">
+        This period was automatically closed on its expected end date. You can edit it if that isn't accurate.
+      </p>` : ''}
+
+    <div class="mt-5 flex gap-3">
+      <button type="button" data-close class="btn-ghost flex-1">Close</button>
+      <button type="button" id="detailsEditBtn" class="btn-primary flex-1">Edit Record</button>
+    </div>
+  `, panel => {
+    panel.querySelector('#detailsEditBtn').addEventListener('click', () => {
+      // Keep any pending return handler — after Edit saves, return to All Periods
+      closeSheet();
+      setTimeout(() => openEditSheet(id), 200);
+    });
+  });
+}
+
+function openEditSheet(id) {
+  const p = state.periods.find(x => x.id === id);
+  if (!p) return;
+
+  const today = todayISO();
+  let editFlow = p.flow;
+
+  openSheet(`
+    ${sheetHeader('Edit Period')}
+
+    <div class="space-y-3.5">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="editStartDate">Start date</label>
+          <input id="editStartDate" type="date" class="input" max="${today}" value="${p.startDate}" />
+        </div>
+        <div>
+          <label class="field-label" for="editStartTime">Start time</label>
+          <input id="editStartTime" type="time" class="input" value="${p.startTime}" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="editEndDate">End date <span class="font-normal normal-case tracking-normal text-ink/50">(optional)</span></label>
+          <input id="editEndDate" type="date" class="input" max="${today}" value="${p.endDate || ''}" />
+        </div>
+        <div>
+          <label class="field-label" for="editEndTime">End time</label>
+          <input id="editEndTime" type="time" class="input" value="${p.endTime || ''}" />
+        </div>
+      </div>
+
+      <div>
+        <p class="field-label">Flow level</p>
+        <div id="editFlowPicker" class="grid grid-cols-3 gap-2"></div>
+      </div>
+
+      <div>
+        <p class="field-label">Notes</p>
+        <textarea id="editNotes" rows="2" maxlength="240" class="input"
+          placeholder="Optional note">${escapeHtml(p.notes)}</textarea>
+      </div>
+    </div>
+
+    <p id="editError" class="mt-3 hidden rounded-2xl bg-rose-50 px-4 py-2.5 text-[12px] font-medium text-rose-700"></p>
+
+    <div class="mt-5 flex gap-3">
+      <button type="button" data-close class="btn-ghost flex-1">Cancel</button>
+      <button type="button" id="editSaveBtn" class="btn-primary flex-1">Save Changes</button>
+    </div>
+  `, panel => {
+    const startDateEl = panel.querySelector('#editStartDate');
+    const startTimeEl = panel.querySelector('#editStartTime');
+    const endDateEl   = panel.querySelector('#editEndDate');
+    const endTimeEl   = panel.querySelector('#editEndTime');
+    const notesEl     = panel.querySelector('#editNotes');
+    const errEl       = panel.querySelector('#editError');
+    const flowWrap    = panel.querySelector('#editFlowPicker');
+
+    function paintFlow() {
+      flowWrap.innerHTML = FLOWS.map(f => {
+        const active = editFlow === f.key;
+        return `
+          <button type="button" data-eflow="${f.key}"
+            class="flex flex-col items-center gap-1 rounded-2xl border px-2 py-2.5 transition active:scale-95
+            ${active ? 'border-blush-400 bg-blush-50 text-blush-700' : 'border-blush-200 bg-white text-ink/60'}">
+            <i data-lucide="${f.icon}" class="h-3.5 w-3.5"></i>
+            <span class="text-[10.5px] font-semibold">${f.label}</span>
+          </button>`;
+      }).join('');
+      flowWrap.querySelectorAll('[data-eflow]').forEach(b => {
+        b.addEventListener('click', () => { editFlow = b.dataset.eflow; paintFlow(); refreshIcons(); });
+      });
+      refreshIcons();
+    }
+    paintFlow();
+
+    // keep end-date minimum in sync with start-date (and clear an impossible end date)
+    startDateEl.addEventListener('change', () => {
+      if (startDateEl.value) {
+        endDateEl.min = startDateEl.value;
+        if (endDateEl.value && endDateEl.value < startDateEl.value) endDateEl.value = '';
+      }
+    });
+    if (p.startDate) endDateEl.min = p.startDate;
+
+    panel.querySelector('#editSaveBtn').addEventListener('click', () => {
+      errEl.classList.add('hidden');
+
+      const startDate = startDateEl.value;
+      const startTime = startTimeEl.value || '09:00';
+      const endDate = endDateEl.value || null;
+      const endTime = endDate ? (endTimeEl.value || '09:00') : null;
+
+      const err = validateEdit(id, startDate, endDate);
+      if (err) {
+        errEl.textContent = err;
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      p.startDate = startDate;
+      p.startTime = startTime;
+      p.endDate = endDate;
+      p.endTime = endTime;
+      p.flow = editFlow;
+      p.notes = notesEl.value.trim();
+p.autoEnded = false;
+
+      sortPeriods();
+      saveState();
+      closeSheetAndReturn();
+      renderAll();
+      toast('Record updated.');
+    });
+  });
+}
+
+function openDeleteSheet(id) {
+  const p = state.periods.find(x => x.id === id);
+  if (!p) return;
+
+  openSheet(`
+    ${sheetHeader('Delete this record?')}
+    <p class="text-[12.5px] leading-relaxed text-ink/70">
+      This will permanently remove your period starting
+      <strong class="text-ink">${fmtLong(p.startDate)}</strong>. This cannot be undone.
+    </p>
+    <div class="mt-5 flex gap-3">
+      <button type="button" data-close class="btn-ghost flex-1">Keep it</button>
+      <button type="button" id="confirmDeleteBtn" class="btn-danger flex-1">Delete</button>
+    </div>
+  `, panel => {
+    panel.querySelector('#confirmDeleteBtn').addEventListener('click', () => {
+      state.periods = state.periods.filter(x => x.id !== id);
+      saveState();
+      closeSheetAndReturn();
+      renderAll();
+      toast('Record deleted.');
+    });
+  });
+}
+
+/* ============================================================================
+   16. CLEAR ALL DATA
+   ========================================================================== */
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  if (!state.periods.length) {
+    toast('There is nothing to clear yet.', 'error');
+    return;
+  }
+
+  openSheet(`
+    ${sheetHeader('Clear all data?')}
+    <p class="text-[12.5px] leading-relaxed text-ink/70">
+      This will permanently delete all <strong class="text-ink">${plural(state.periods.length, 'period record')}</strong>
+      and every prediction based on them. This cannot be undone.
+    </p>
+    <div class="mt-5 flex gap-3">
+      <button type="button" data-close class="btn-ghost flex-1">Cancel</button>
+      <button type="button" id="confirmClearAll" class="btn-danger flex-1">Clear all</button>
+    </div>
+  `, panel => {
+    panel.querySelector('#confirmClearAll').addEventListener('click', () => {
+      state.periods = [];
+      saveState();
+      ui.selectedDate = null;
+      ui.histFilter = 'all';
+      document.querySelectorAll('[data-hist-filter]').forEach(b => {
+        b.classList.toggle('hist-chip-active', b.dataset.histFilter === 'all');
+      });
+      closeSheet();
+      renderAll();
+      toast('All data cleared.');
+    });
+  });
+});
+
+/* ============================================================================
+   17. AUTO-CLOSE STALE ONGOING PERIODS
+   ========================================================================== */
+function autoCloseStalePeriods() {
+  const today = todayISO();
+  let closed = null;
+
+  // Compute average duration from COMPLETED periods only, before closing.
+  const completed = state.periods.filter(p => !!p.endDate && !p.autoEnded);
+  const durations = completed
+    .map(p => diffDays(p.startDate, p.endDate) + 1)
+    .filter(n => n > 0);
+  const avgDur = durations.length
+    ? Math.max(1, Math.round(durations.reduce((a, b) => a + b, 0) / durations.length))
+    : 5;
+
+  state.periods.forEach(p => {
+    if (p.endDate) return;
+    const expEnd = expectedEnd(p.startDate, avgDur);
+    if (today >= expEnd) {
+      p.endDate = expEnd;
+      p.endTime = '23:59';
+      p.autoEnded = true;
+      closed = p;
+    }
+  });
+
+  if (closed) {
+    saveState();
+    setTimeout(() => {
+      toast(`Your period was auto-marked as ended on ${fmtMedium(closed.endDate)}.`);
+    }, 500);
+  }
+}
+
+/* ============================================================================
+   18. HELPERS
+   ========================================================================== */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ============================================================================
+   19. MASTER RENDER
+   ========================================================================== */
+function renderAll() {
+  renderHome();
+  renderCalendar();
+  renderHistory();
+  renderAddEndSection();
+  updateAddExpectedEnd();
+  updateNotesCounter();
+  refreshIcons();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    autoCloseStalePeriods();
+    renderAll();
+  }
+});
+
+/* ============================================================================
+   20. INIT
+   ========================================================================== */
+(function init() {
+  loadState();
+  autoCloseStalePeriods();
+
+  setAddDefaults();
+  renderFlowPicker();
+  renderAddEndSection();
+  updateAddExpectedEnd();
+  updateNotesCounter();
+
+  // Home header shortcuts (bound once — elements are static in the HTML shell)
+  const qaMoreEl = document.getElementById('qaMore');
+  if (qaMoreEl) qaMoreEl.addEventListener('click', () => switchTab('add'));
+  const avatarEl = document.getElementById('homeAvatar');
+  if (avatarEl) avatarEl.addEventListener('click', () => switchTab('history'));
+
+  renderAll();
+
+  // Handle PWA shortcut deep links (?action=start|calendar)
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  if (action === 'calendar') {
+    switchTab('calendar');
+  } else if (action === 'start') {
+    switchTab('add');
+  } else {
+    switchTab('home');
+  }
+
+  // keep "today" fresh if the app stays open across midnight
+  let lastKnownToday = todayISO();
+  setInterval(() => {
+    const now = todayISO();
+    if (now !== lastKnownToday) {
+      lastKnownToday = now;
+      addStartDateEl.max = now;
+      autoCloseStalePeriods();
+      renderAll();
+    }
+  }, 60000);
+
+  window.addEventListener('pageshow', () => refreshIcons());
+})();
+
+/* ============================================================================
+   21. PWA — SERVICE WORKER + CUSTOM INSTALL PROMPT
+   ========================================================================== */
+(function pwaInit() {
+  /* ---- 1. Register the service worker ---- */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        // Surface updates for a smooth experience
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('A new version is ready. Reload to update.');
+            }
+          });
+        });
+      }).catch(err => {
+        console.warn('Femora: service worker registration failed.', err);
+      });
+    });
+
+    // Reload once a new SW takes control (avoids stale UI)
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }
+
+  /* ---- 2. Custom install prompt ---- */
+  const DISMISS_KEY = 'femora.pwa.dismissedAt';
+  const DISMISS_COOLDOWN_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+
+  const installRoot = document.getElementById('pwaInstallRoot');
+  const installCard = document.getElementById('pwaInstallCard');
+  const installBtn  = document.getElementById('pwaInstallBtn');
+  const laterBtn    = document.getElementById('pwaLaterBtn');
+  const dismissBtn  = document.getElementById('pwaDismissBtn');
+
+  let deferredPrompt = null;
+
+  function isStandalone() {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function isIOS() {
+    const ua = window.navigator.userAgent;
+    return /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  }
+
+  function isDismissedRecently() {
+    try {
+      const raw = localStorage.getItem(DISMISS_KEY);
+      if (!raw) return false;
+      return Date.now() - Number(raw) < DISMISS_COOLDOWN_MS;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function recordDismissal() {
+    try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch (e) {}
+  }
+
+  function showInstallCard() {
+    if (!installRoot || !installCard) return;
+    if (isStandalone() || isDismissedRecently()) return;
+
+    installRoot.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      installCard.classList.remove('translate-y-6', 'opacity-0');
+    });
+    refreshIcons();
+  }
+
+  function hideInstallCard() {
+    if (!installRoot || !installCard) return;
+    installCard.classList.add('translate-y-6', 'opacity-0');
+    setTimeout(() => installRoot.classList.add('hidden'), 280);
+  }
+
+  /* Android / Chromium: real beforeinstallprompt */
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredPrompt = event;
+
+    // Wait a beat so the UI is settled, then offer install
+    setTimeout(showInstallCard, 1200);
+  });
+
+  /* iOS Safari: no beforeinstallprompt, so show a manual instruction card */
+  if (isIOS() && !isStandalone()) {
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (!isDismissedRecently()) showInstallCard();
+
+        // Adjust button copy for iOS — "Install" can't trigger a native prompt
+        if (installBtn) installBtn.textContent = 'How to install';
+      }, 1500);
+    });
+  }
+
+  /* User taps "Install" */
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        // Chromium path
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+
+        if (choice.outcome === 'accepted') {
+          toast('Femora installed. See you on the home screen 💗');
+          hideInstallCard();
+        } else {
+          recordDismissal();
+          hideInstallCard();
+        }
+        return;
+      }
+
+      // iOS / unsupported fallback — explain how to install
+      if (isIOS()) {
+        openSheet(`
+          ${sheetHeader('Add Femora to Home Screen')}
+          <div class="space-y-3">
+            <div class="flex items-start gap-3 rounded-2xl bg-blush-50 p-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white text-blush-700">
+                <i data-lucide="share" class="h-3.5 w-3.5"></i>
+              </span>
+              <p class="text-[12.5px] leading-relaxed text-ink/75">
+                Tap the <strong>Share</strong> button in Safari's toolbar.
+              </p>
+            </div>
+            <div class="flex items-start gap-3 rounded-2xl bg-blush-50 p-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white text-blush-700">
+                <i data-lucide="plus-square" class="h-3.5 w-3.5"></i>
+              </span>
+              <p class="text-[12.5px] leading-relaxed text-ink/75">
+                Scroll down and tap <strong>Add to Home Screen</strong>.
+              </p>
+            </div>
+            <div class="flex items-start gap-3 rounded-2xl bg-lilac-50 p-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white text-lilac-600">
+                <i data-lucide="check" class="h-3.5 w-3.5"></i>
+              </span>
+              <p class="text-[12.5px] leading-relaxed text-ink/75">
+                Confirm with <strong>Add</strong> — Femora will appear on your home screen.
+              </p>
+            </div>
+          </div>
+          <button type="button" data-close class="btn-ghost mt-4 w-full">Got it</button>
+        `);
+        recordDismissal();
+        hideInstallCard();
+        return;
+      }
+
+      // Desktop Safari / Firefox / others
+      toast('Open Femora in Chrome or install it from your browser menu.', 'error');
+      recordDismissal();
+      hideInstallCard();
+    });
+  }
+
+  /* "Not now" / "×" */
+  if (laterBtn) laterBtn.addEventListener('click', () => {
+    recordDismissal();
+    hideInstallCard();
+  });
+  if (dismissBtn) dismissBtn.addEventListener('click', () => {
+    recordDismissal();
+    hideInstallCard();
+  });
+
+  /* Hide card once installed via another route */
+  window.addEventListener('appinstalled', () => {
+    toast('Femora installed 🎉');
+    recordDismissal();
+    hideInstallCard();
+  });
+
+  /* If already running standalone, never show the card */
+  if (isStandalone()) hideInstallCard();
+})();
+</script>
+
+</body>
+</html>
