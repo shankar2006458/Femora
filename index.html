@@ -301,13 +301,13 @@
   /* Extra top space inside the "View all" sheet so cards breathe */
   #modalPanel .tl-sheet-list .tl-rail:first-child { margin-top: 4px; }
 
-  /* ---------- modal scroll-to-top button ---------- */
-  #modalScrollTopBtn.is-visible {
+  /* ---------- modal floating close button ---------- */
+  #modalCloseFloatBtn.is-visible {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
   }
-  #modalScrollTopBtn:active { transform: scale(.92); }
+  #modalCloseFloatBtn:active { transform: scale(.92); }
 
   /* ---------- misc ---------- */
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -593,6 +593,30 @@
       </div>
 
       <div id="historyList" class="relative mt-4"></div>
+
+      <!-- Export / Import -->
+      <div class="mt-6 rounded-[24px] border border-white bg-white/90 p-5 shadow-[0_10px_30px_-22px_rgba(201,63,112,0.8)]">
+        <div class="mb-3 flex items-center gap-2">
+          <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-blush-50">
+            <i data-lucide="database" class="h-3.5 w-3.5 text-blush-600"></i>
+          </div>
+          <h2 class="text-[12.5px] font-semibold text-ink/70">Backup & Restore</h2>
+        </div>
+        <p class="mb-3 text-[11.5px] leading-relaxed text-ink/55">
+          Save a copy of your data or restore from a backup. Everything stays on your device — nothing is uploaded.
+        </p>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button type="button" id="exportBtn"
+            class="flex items-center justify-center gap-1.5 rounded-xl border border-blush-200 bg-white py-2.5 text-[12px] font-semibold text-blush-700 transition active:scale-[.98]">
+            <i data-lucide="download" class="h-3.5 w-3.5"></i> Export
+          </button>
+          <button type="button" id="importBtn"
+            class="flex items-center justify-center gap-1.5 rounded-xl border border-lilac-200 bg-white py-2.5 text-[12px] font-semibold text-lilac-600 transition active:scale-[.98]">
+            <i data-lucide="upload" class="h-3.5 w-3.5"></i> Import
+          </button>
+        </div>
+        <input id="importFileInput" type="file" accept="application/json,.json" class="hidden" />
+      </div>
     </section>
 
   </main>
@@ -642,9 +666,9 @@
     <div class="relative">
       <div id="modalPanel"
            class="no-scrollbar max-h-[86vh] translate-y-8 overflow-y-auto rounded-[28px] bg-white p-6 opacity-0 shadow-2xl transition-all duration-300"></div>
-      <button id="modalScrollTopBtn" type="button" aria-label="Scroll to top"
-              class="pointer-events-none absolute right-3 bottom-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-blush-700 opacity-0 shadow-[0_10px_24px_-10px_rgba(201,63,112,0.8)] ring-1 ring-blush-200 backdrop-blur transition-all duration-300 translate-y-2">
-        <i data-lucide="arrow-up" class="h-4 w-4"></i>
+      <button id="modalCloseFloatBtn" type="button" aria-label="Close"
+              class="pointer-events-none absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-blush-700 opacity-0 shadow-[0_10px_24px_-10px_rgba(201,63,112,0.8)] ring-1 ring-blush-200 backdrop-blur transition-all duration-300 translate-y-2">
+        <i data-lucide="x" class="h-4 w-4"></i>
       </button>
     </div>
   </div>
@@ -1095,21 +1119,25 @@ function openSheet(html, onMount) {
 
   // reset scroll position on every new sheet open
   modalPanel.scrollTop = 0;
-  updateModalScrollTopBtn();
+  updateModalCloseFloatBtn();
 
   setTimeout(() => {
     modalBackdrop.classList.remove('opacity-0');
     modalBackdrop.classList.add('opacity-100');
     modalPanel.classList.remove('translate-y-8', 'opacity-0');
+    updateModalCloseFloatBtn();
   }, 15);
 
   if (typeof onMount === 'function') onMount(modalPanel);
+  updateModalCloseFloatBtn();   // re-evaluate after content is injected
 }
 
 function closeSheet() {
   modalBackdrop.classList.remove('opacity-100');
   modalBackdrop.classList.add('opacity-0');
   modalPanel.classList.add('translate-y-8', 'opacity-0');
+  // Hide the floating X immediately so it doesn't linger while the panel slides away
+  if (modalCloseFloatBtn) modalCloseFloatBtn.classList.remove('is-visible');
   modalTimer = setTimeout(() => {
     modalRoot.classList.add('hidden');
     modalPanel.innerHTML = '';
@@ -1122,26 +1150,29 @@ function closeSheet() {
     if (modalReturn) {
       modalReturn = null;
     }
-    updateModalScrollTopBtn();
+    updateModalCloseFloatBtn();
   }, 260);
 }
 
 /* ---------- modal scroll-to-top button ---------- */
-const modalScrollTopBtn = document.getElementById('modalScrollTopBtn');
+const modalCloseFloatBtn = document.getElementById('modalCloseFloatBtn');
 
-function updateModalScrollTopBtn() {
-  if (!modalScrollTopBtn) return;
-  const show = !modalRoot.classList.contains('hidden') && modalPanel.scrollTop > 200;
-  modalScrollTopBtn.classList.toggle('is-visible', show);
+function updateModalCloseFloatBtn() {
+  if (!modalCloseFloatBtn) return;
+  // Only show on the "All Periods" sheet (it has .tl-sheet-list and no header X).
+  const isOpen = !modalRoot.classList.contains('hidden') && modalPanel.innerHTML.trim() !== '';
+  const isAllPeriods = !!modalPanel.querySelector('.tl-sheet-list');
+  modalCloseFloatBtn.classList.toggle('is-visible', isOpen && isAllPeriods);
 }
 
-if (modalScrollTopBtn) {
-  modalScrollTopBtn.addEventListener('click', () => {
-    modalPanel.scrollTo({ top: 0, behavior: 'smooth' });
+if (modalCloseFloatBtn) {
+  modalCloseFloatBtn.addEventListener('click', () => {
+    // X button = "back to All Periods" if we came from there
+    closeSheetAndReturn();
   });
 }
 
-modalPanel.addEventListener('scroll', updateModalScrollTopBtn, { passive: true });
+modalPanel.addEventListener('scroll', updateModalCloseFloatBtn, { passive: true });
 
 modalBackdrop.addEventListener('click', () => {
   // Backdrop tap = intentional dismissal → no return
@@ -1156,14 +1187,15 @@ modalRoot.addEventListener('click', e => {
   }
 });
 
-function sheetHeader(title) {
+function sheetHeader(title, showClose = true) {
   return `
     <div class="mb-4 flex items-start justify-between gap-3">
       <h3 class="font-display text-[20px] leading-tight text-ink">${title}</h3>
+      ${showClose ? `
       <button type="button" data-close
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blush-50 text-blush-600 transition active:scale-90">
         <i data-lucide="x" class="h-4 w-4"></i>
-      </button>
+      </button>` : ''}
     </div>`;
 }
 
@@ -2277,7 +2309,7 @@ function openAllPeriodsSheet(preserveScroll) {
   }).join('');
 
   openSheet(`
-    ${sheetHeader('All Periods')}
+    ${sheetHeader('All Periods', false)}
     <p class="-mt-3 mb-4 text-[11.5px] leading-relaxed text-ink/55">
       ${plural(filtered.length, 'record')} · ${ui.histFilter === 'all' ? 'all time' : ui.histFilter}
     </p>
@@ -2698,6 +2730,167 @@ function openDeleteSheet(id) {
     });
   });
 }
+
+/* ============================================================================
+   15.5. EXPORT / IMPORT
+   ========================================================================== */
+function exportData() {
+  if (!state.periods.length) {
+    toast('There is nothing to export yet.', 'error');
+    return;
+  }
+
+  const payload = {
+    app: 'femora',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    periods: state.periods
+  };
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `femora-backup-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  toast(`Exported ${plural(state.periods.length, 'record')}.`);
+}
+
+function importData(file) {
+  const reader = new FileReader();
+
+  reader.onerror = () => toast('Could not read that file.', 'error');
+
+  reader.onload = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(String(reader.result || ''));
+    } catch (e) {
+      toast('That file is not valid JSON.', 'error');
+      return;
+    }
+
+    // Accept either { periods: [...] } (our export) or a bare array.
+    let incoming = null;
+    if (parsed && Array.isArray(parsed.periods)) incoming = parsed.periods;
+    else if (Array.isArray(parsed)) incoming = parsed;
+
+    if (!incoming) {
+      toast('No period records found in that file.', 'error');
+      return;
+    }
+
+    const valid = incoming.filter(isValidRecord).map(normalizePeriod);
+    if (!valid.length) {
+      toast('No valid period records found in that file.', 'error');
+      return;
+    }
+
+    openSheet(`
+      ${sheetHeader('Import backup?')}
+      <p class="text-[12.5px] leading-relaxed text-ink/70">
+        This file contains <strong class="text-ink">${plural(valid.length, 'valid record')}</strong>.
+        Choose how to bring them into Femora:
+      </p>
+      <div class="mt-4 space-y-2.5">
+        <div class="rounded-2xl bg-blush-50 p-3">
+          <p class="text-[12px] font-semibold text-blush-700">Merge (recommended)</p>
+          <p class="mt-0.5 text-[11.5px] leading-relaxed text-ink/65">
+            Keep your current ${plural(state.periods.length, 'record')} and add any new ones from the file.
+            Existing records are never modified.
+          </p>
+        </div>
+        <div class="rounded-2xl bg-lilac-50 p-3">
+          <p class="text-[12px] font-semibold text-lilac-600">Replace everything</p>
+          <p class="mt-0.5 text-[11.5px] leading-relaxed text-ink/65">
+            Delete your current data and use only what's in the file. This cannot be undone.
+          </p>
+        </div>
+      </div>
+      <div class="mt-5 flex flex-col gap-2">
+        <button type="button" id="importMergeBtn" class="btn-primary w-full">Merge into my data</button>
+        <button type="button" id="importReplaceBtn" class="btn-danger w-full">Replace all data</button>
+        <button type="button" data-close class="btn-ghost w-full">Cancel</button>
+      </div>
+    `, panel => {
+      panel.querySelector('#importMergeBtn').addEventListener('click', () => {
+        applyImportMerge(valid);
+      });
+      panel.querySelector('#importReplaceBtn').addEventListener('click', () => {
+        applyImportReplace(valid);
+      });
+    });
+  };
+
+  reader.readAsText(file);
+}
+
+function applyImportMerge(valid) {
+  // Merge by (startDate + startTime) uniqueness — drop incoming duplicates.
+  const key = p => `${p.startDate}|${p.startTime || '09:00'}`;
+  const existing = new Set(state.periods.map(key));
+
+  let added = 0;
+  let skipped = 0;
+  valid.forEach(p => {
+    if (existing.has(key(p))) { skipped++; return; }
+    state.periods.push(p);
+    existing.add(key(p));
+    added++;
+  });
+
+  if (added) {
+    sortPeriods();
+    saveState();
+    clearModalReturn();
+    closeSheet();
+    renderAll();
+    toast(`Merged ${plural(added, 'record')}${skipped ? ` · skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''}.`);
+  } else {
+    clearModalReturn();
+    closeSheet();
+    toast('No new records to add — everything was already here.', 'error');
+  }
+}
+
+function applyImportReplace(valid) {
+  state.periods = valid.slice();
+  sortPeriods();
+  saveState();
+  ui.selectedDate = null;
+  ui.histFilter = 'all';
+  document.querySelectorAll('[data-hist-filter]').forEach(b => {
+    b.classList.toggle('hist-chip-active', b.dataset.histFilter === 'all');
+  });
+  clearModalReturn();
+  closeSheet();
+  renderAll();
+  toast(`Imported ${plural(state.periods.length, 'record')}.`);
+}
+
+/* ---------- wire the buttons (bound once) ---------- */
+(function wireBackupButtons() {
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const fileInput = document.getElementById('importFileInput');
+
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportData);
+  }
+  if (importBtn && fileInput) {
+    importBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      fileInput.value = ''; // allow re-selecting the same file later
+      if (file) importData(file);
+    });
+  }
+})();
 
 /* ============================================================================
    16. CLEAR ALL DATA
